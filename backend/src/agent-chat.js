@@ -55,9 +55,10 @@ export async function handleWorkflowSetupMessage({
   return {
     state: "workflow_setup",
     status: "generated",
-    message: `I generated ${generated.workflow.name} with ${Object.keys(generated.workflow.states).length} workflow states.`,
+    message: `I built ${generated.workflow.name} with ${Object.keys(generated.workflow.states).length} deterministic workflow states.`,
     result: generated,
-    explanation: "GPT generated the setup-time decision tree; runtime order processing still uses deterministic JSON rules."
+    explanation:
+      "The draft and test runs use explicit keyword, regex, and amount rules. No probabilistic matching is used to decide order captures."
   };
 }
 

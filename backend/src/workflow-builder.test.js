@@ -1,5 +1,10 @@
 import assert from "node:assert/strict";
-import { buildDecisionTreeWorkflow, normalizeGeneratedWorkflow, workflowGenerationSchema } from "./workflow-builder.js";
+import {
+  buildDecisionTreeWorkflow,
+  generateWorkflow,
+  normalizeGeneratedWorkflow,
+  workflowGenerationSchema
+} from "./workflow-builder.js";
 import { runWorkflow } from "./workflow-runner.js";
 
 assertStructuredOutputSchema(workflowGenerationSchema);
@@ -15,6 +20,31 @@ const generated = buildDecisionTreeWorkflow({
 
 assert.equal(generated.generation_mode, "local_template");
 assert.equal(generated.workflow.start, "detect_payment_evidence");
+
+const envBackup = {
+  gptApiKey: process.env["GPT-API-KEY"],
+  openAiApiKey: process.env.OPENAI_API_KEY,
+  useOpenAiWorkflowBuilder: process.env.USE_OPENAI_WORKFLOW_BUILDER,
+  workflowBuilderMode: process.env.WORKFLOW_BUILDER_MODE
+};
+
+process.env.OPENAI_API_KEY = "test-key-present";
+delete process.env["GPT-API-KEY"];
+delete process.env.USE_OPENAI_WORKFLOW_BUILDER;
+delete process.env.WORKFLOW_BUILDER_MODE;
+
+const generatedWithKey = await generateWorkflow({
+  businessDescription:
+    "Small Singapore dessert stall selling egg tarts and sweet drinks. Customers pay only by PayNow or bank transfer.",
+  commonOrderMessages: ["I want 2 egg tarts, paid by PayNow"],
+  paidPhrases: ["paid", "paynow", "bank transfer"],
+  workflowId: "seller-rule-flow",
+  workflowName: "Seller Rule Flow"
+});
+
+assert.equal(generatedWithKey.generation_mode, "local_template");
+
+restoreEnv(envBackup);
 
 const decisionStates = Object.values(generated.workflow.states).filter((state) => state.type === "decision");
 assert.equal(decisionStates.length, 3);
@@ -111,7 +141,7 @@ const normalizedGenerated = normalizeGeneratedWorkflow({
         type: "action",
         action: "ask_follow_up",
         payment_status: null,
-        message: "Ask for PayNow or bank transfer evidence before capturing this order.",
+        message: "Ask the customer to upload a payment screenshot or receipt before capturing this order.",
         required_fields: ["payment_evidence"]
       }
     ]
@@ -140,6 +170,22 @@ assert.equal(normalizedPaidOrder.status, "created");
 assert.deepEqual(normalizedPaidOrder.trace, ["detect_payment_evidence", "create_paid_capture"]);
 
 console.log("workflow builder tests passed");
+
+function restoreEnv(backup) {
+  restoreEnvValue("GPT-API-KEY", backup.gptApiKey);
+  restoreEnvValue("OPENAI_API_KEY", backup.openAiApiKey);
+  restoreEnvValue("USE_OPENAI_WORKFLOW_BUILDER", backup.useOpenAiWorkflowBuilder);
+  restoreEnvValue("WORKFLOW_BUILDER_MODE", backup.workflowBuilderMode);
+}
+
+function restoreEnvValue(key, value) {
+  if (typeof value === "undefined") {
+    delete process.env[key];
+    return;
+  }
+
+  process.env[key] = value;
+}
 
 function assertStructuredOutputSchema(schema, path = "schema") {
   if (!schema || typeof schema !== "object") {

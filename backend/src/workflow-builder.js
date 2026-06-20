@@ -134,7 +134,7 @@ export async function generateWorkflow({
 }) {
   const apiKey = process.env["GPT-API-KEY"] ?? process.env.OPENAI_API_KEY;
 
-  if (!apiKey) {
+  if (!apiKey || !shouldUseOpenAiWorkflowBuilder()) {
     return buildDecisionTreeWorkflow({
       businessDescription,
       changeRequest,
@@ -243,6 +243,12 @@ export function buildDecisionTreeWorkflow({
   const paymentEvidencePhrases = uniquePhrases([
     ...paidPhrases,
     ...extractPaymentPhrases(changeRequest),
+    "payment proof uploaded",
+    "payment screenshot uploaded",
+    "uploaded screenshot",
+    "receipt uploaded",
+    "paynow receipt",
+    "bank transfer receipt",
     "paid",
     "paynow",
     "bank transfer",
@@ -328,7 +334,7 @@ export function buildDecisionTreeWorkflow({
       ask_payment_evidence: {
         type: "action",
         action: "ask_follow_up",
-        message: "Ask for PayNow or bank transfer evidence before capturing this order.",
+        message: "Ask the customer to upload a payment screenshot or receipt before capturing this order.",
         required_fields: ["payment_evidence"]
       },
       ask_order_confirmation: {
@@ -354,7 +360,7 @@ export function buildDecisionTreeWorkflow({
     rule_explanations: [
       {
         rule_id: "has_payment_evidence",
-        explanation: "First branch checks for PayNow, bank transfer, receipt, or other explicit paid evidence."
+        explanation: "First branch checks for uploaded payment screenshot, receipt, PayNow, or bank transfer proof."
       },
       {
         rule_id: "paid_message_has_order_intent",
@@ -366,7 +372,7 @@ export function buildDecisionTreeWorkflow({
       },
       {
         rule_id: "order_missing_payment_evidence",
-        explanation: "Order requests without payment evidence ask for follow-up instead of creating unpaid orders."
+        explanation: "Order requests without uploaded payment proof ask for follow-up instead of creating unpaid orders."
       },
       {
         rule_id: "amount_without_clear_order",
@@ -388,6 +394,13 @@ export function saveGeneratedWorkflow(workflow) {
   };
 }
 
+function shouldUseOpenAiWorkflowBuilder() {
+  const mode = String(process.env.WORKFLOW_BUILDER_MODE ?? "").trim().toLowerCase();
+  const legacyFlag = String(process.env.USE_OPENAI_WORKFLOW_BUILDER ?? "").trim().toLowerCase();
+
+  return mode === "openai" || legacyFlag === "true";
+}
+
 function workflowBuilderInstructions() {
   return [
     "You generate zorder workflow JSON for home business order tracking.",
@@ -396,14 +409,14 @@ function workflowBuilderInstructions() {
     "If existing_workflow and change_request are provided, revise only the relevant branches and preserve unrelated state ids where possible.",
     "Use at least these decision states: detect_payment_evidence, detect_order_content, detect_order_without_payment.",
     "The start state must be detect_payment_evidence.",
-    "The first branch must decide whether PayNow, bank transfer, paid, transfer done, or receipt evidence exists.",
+    "The first branch must decide whether uploaded payment proof, payment screenshot, receipt, PayNow receipt, or bank transfer receipt evidence exists.",
     "A paid branch may create_order only after order intent or quantity is detected.",
     "A missing-payment branch must ask_follow_up for payment_evidence.",
     "Use only explicit keyword, regex, and amount rules.",
     "For rule conditions, set unused condition operators to null.",
     "Do not create CRM, invoice, inventory, auth, payment gateway, or Telegram-only behavior.",
-    "Only create an order when the message includes PayNow, bank transfer, transfer done, paid, or receipt evidence.",
-    "If an order request is missing payment evidence, ask a follow-up for payment_evidence instead of creating an unpaid order.",
+    "Only create an order when the message includes order content and uploaded payment proof or receipt evidence.",
+    "If an order request is missing uploaded payment proof, ask a follow-up for payment_evidence instead of creating an unpaid order.",
     "Prefer paid order detection rules before payment-only update rules so paid order messages still create orders.",
     "Use only these condition operators: containsAny, containsAll, matchesRegex, amountDetected.",
     "Use only these actions: create_order, update_payment_status, needs_review, ask_follow_up.",

@@ -83,6 +83,7 @@ type ProcessResult = {
   trace: string[];
   order?: ProcessedOrder;
   payment_status?: PaymentStatus;
+  required_fields?: string[];
 };
 
 type WorkflowCondition = {
@@ -128,6 +129,8 @@ type WorkflowGenerateInput = {
   changeRequest?: string;
   existingWorkflow?: WorkflowGeneration["workflow"] | null;
 };
+type WorkflowSetupStepId = "products";
+type WorkflowSetupAnswers = Record<WorkflowSetupStepId, string>;
 type WorkflowChatMessage = {
   id: string;
   role: "assistant" | "user";
@@ -140,7 +143,7 @@ type AuthRole = "user" | "admin";
 type AppRoute = "intro" | "login" | AuthRole | "tech-stack";
 type AuthMode = "sign-in" | "sign-up";
 type AdminTab = "orders" | "rules" | "inventory" | "branding";
-type WorkflowBuilderTab = "rules" | "draft";
+type WorkflowBuilderTab = "rules" | "draft" | "test";
 type CapturePeriodDays = 1 | 3 | 7 | 30 | 90 | 365;
 type InventorySubTab = "inventory" | "sales" | "analytics";
 type UserTab = "menu" | "my-orders" | "profile";
@@ -242,18 +245,30 @@ const sampleMessages = [
   "Is the shop open today?"
 ];
 
-const workflowChatStorageKey = "zorder:workflow-builder:chat:v2";
-const initialWorkflowChatMessages: WorkflowChatMessage[] = createInitialWorkflowChatMessages();
-const workflowStarterPrompts = [
-  "Small Singapore dessert stall selling egg tarts, bandung, and lemonade. Customers pay only by PayNow or bank transfer. Capture an order only when payment evidence is provided.",
-  "Home bakery taking manual orders. Paid messages should become sales captures, but pay-later messages should ask for payment proof first.",
-  "Drink stall selling bandung and lemonade. Treat PayNow, bank transfer, receipt, or transfer done as payment evidence.",
-  "Food seller with messy customer messages. Extract item quantity and customer name, then create an order only when payment proof is clear."
+const workflowChatStorageKey = "zorder:workflow-builder:chat:v4";
+const workflowSetupSteps: Array<{
+  id: WorkflowSetupStepId;
+  title: string;
+  question: string;
+  placeholder: string;
+  suggestions: string[];
+}> = [
+  {
+    id: "products",
+    title: "Products",
+    question: "What does the seller sell? List only the products or categories that can appear in customer messages.",
+    placeholder: "Example: egg tarts, bandung, lemonade",
+    suggestions: [
+      "egg tarts, bandung, lemonade",
+      "cakes, brownies, cookies",
+      "kopi, teh, kaya toast"
+    ]
+  }
 ];
 const workflowBuildProgressSteps = [
   {
     title: "Reading business context",
-    detail: "Products, payment methods, and paid-only capture rules."
+    detail: "Products plus the fixed paid-with-proof capture rule."
   },
   {
     title: "Drafting decision states",
@@ -265,7 +280,7 @@ const workflowBuildProgressSteps = [
   },
   {
     title: "Preparing live draft",
-    detail: "Summarizing rules, test inputs, and the workflow preview."
+    detail: "Summarizing rules, branch paths, and the workflow preview."
   }
 ];
 
@@ -456,11 +471,19 @@ function Workspace() {
         change_request: changeRequest,
         common_order_messages: sampleMessages.slice(0, 3),
         ...(existingWorkflow ? { existing_workflow: existingWorkflow } : {}),
-        paid_phrases: ["paid", "paynow", "sent receipt", "bank transfer", "transferred", "transfer done"],
+        paid_phrases: [
+          "payment proof uploaded",
+          "payment screenshot uploaded",
+          "uploaded screenshot",
+          "receipt uploaded",
+          "paynow receipt",
+          "bank transfer receipt",
+          "paid"
+        ],
         pay_later_phrases: [],
-        required_fields: ["order_summary", "payment_evidence"],
-        workflow_id: "seller-generated-flow",
-        workflow_name: "Seller Generated Flow",
+        required_fields: ["payment_evidence"],
+        workflow_id: "seller-rule-flow",
+        workflow_name: "Seller Rule Flow",
         save: false
       };
 
@@ -2323,6 +2346,7 @@ function AdminView({
             setBusinessDescription={setBusinessDescription}
             generateMutation={generateMutation}
             generatedWorkflow={generatedWorkflow}
+            shopBranding={shopBranding}
           />
         ) : null}
 
@@ -2469,20 +2493,28 @@ function OrderRulesPanel({
   businessDescription,
   setBusinessDescription,
   generateMutation,
-  generatedWorkflow
+  generatedWorkflow,
+  shopBranding
 }: {
   adminCredential: AuthCredential;
   businessDescription: string;
   setBusinessDescription: React.Dispatch<React.SetStateAction<string>>;
   generateMutation: UseMutationResult<WorkflowGeneration, Error, WorkflowGenerateInput>;
   generatedWorkflow: WorkflowGeneration | null;
+  shopBranding: ShopBranding;
 }) {
   const [builderPrompt, setBuilderPrompt] = useStateValue("");
+  const [setupAnswers, setSetupAnswers] = useStateValue<WorkflowSetupAnswers>(createEmptyWorkflowSetupAnswers());
+  const [setupStepIndex, setSetupStepIndex] = useStateValue(0);
   const [activeBuilderTab, setActiveBuilderTab] = useStateValue<WorkflowBuilderTab>("rules");
   const [publishNotice, setPublishNotice] = useStateValue<string | null>(null);
   const [chatMessages, setChatMessages] = useState<WorkflowChatMessage[]>(loadWorkflowChatHistory);
   const [buildElapsedSeconds, setBuildElapsedSeconds] = useState(0);
+  const [isRefiningBuild, setIsRefiningBuild] = useState(false);
   const chatLogRef = useRef<HTMLDivElement>(null);
+  const currentSetupStep = workflowSetupSteps[Math.min(setupStepIndex, workflowSetupSteps.length - 1)];
+  const isSetupComplete = setupStepIndex >= workflowSetupSteps.length;
+  const isFinalSetupStep = setupStepIndex === workflowSetupSteps.length - 1;
 
   const publishMutation = useMutation({
     mutationFn: (workflow: WorkflowGeneration["workflow"]) => publishWorkflow(adminCredential, workflow),
@@ -2517,38 +2549,51 @@ function OrderRulesPanel({
 
   async function submitBuilderPrompt() {
     const prompt = builderPrompt.trim();
-    const currentWorkflow = generatedWorkflow?.workflow ?? null;
-    const isRefiningWorkflow = Boolean(currentWorkflow);
-    const message = prompt;
+    const step = currentSetupStep;
 
-    if (!message || generateMutation.isPending) {
+    if (!prompt || generateMutation.isPending || isSetupComplete) {
       return;
     }
 
-    const nextBusinessDescription = isRefiningWorkflow ? businessDescription : message;
-    const changeRequest = isRefiningWorkflow
-      ? message
-      : "Build the first deterministic workflow from this business context.";
-
-    if (!isRefiningWorkflow) {
-      setBusinessDescription(nextBusinessDescription);
-    }
-
+    const nextAnswers = { ...setupAnswers, [step.id]: prompt };
+    const nextStepIndex = setupStepIndex + 1;
     setBuilderPrompt("");
     setChatMessages((current) => [
       ...current,
       {
         id: createWorkflowChatId("user"),
         role: "user",
-        content: message,
+        content: `${step.title}\n${prompt}`,
         createdAt: new Date().toISOString()
       }
     ]);
+    setSetupAnswers(nextAnswers);
+
+    if (nextStepIndex < workflowSetupSteps.length) {
+      setSetupStepIndex(nextStepIndex);
+      setChatMessages((current) => [
+        ...current,
+        {
+          id: createWorkflowChatId("assistant-step"),
+          role: "assistant",
+          content: buildWorkflowSetupQuestion(nextStepIndex),
+          createdAt: new Date().toISOString()
+        }
+      ]);
+      return;
+    }
+
+    const currentWorkflow = generatedWorkflow?.workflow ?? null;
+    const isRefiningWorkflow = Boolean(currentWorkflow);
+    const nextBusinessDescription = buildWorkflowSetupContext(nextAnswers);
+    setSetupStepIndex(workflowSetupSteps.length);
+    setBusinessDescription(nextBusinessDescription);
+    setIsRefiningBuild(isRefiningWorkflow);
 
     try {
       const result = await generateMutation.mutateAsync({
         businessDescription: nextBusinessDescription,
-        changeRequest,
+        changeRequest: "Build the deterministic paid-order workflow from these collected setup answers.",
         existingWorkflow: currentWorkflow
       });
 
@@ -2564,6 +2609,7 @@ function OrderRulesPanel({
       ]);
     } catch (error) {
       const messageText = error instanceof Error ? formatWorkflowGenerateError(error) : "Workflow generation failed.";
+      setSetupStepIndex(workflowSetupSteps.length - 1);
       setChatMessages((current) => [
         ...current,
         {
@@ -2575,6 +2621,13 @@ function OrderRulesPanel({
         }
       ]);
     }
+  }
+
+  function resetWorkflowSetup() {
+    setBuilderPrompt("");
+    setSetupAnswers(createEmptyWorkflowSetupAnswers());
+    setSetupStepIndex(0);
+    setChatMessages(createInitialWorkflowChatMessages());
   }
 
   function handleBuilderPromptKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -2611,7 +2664,7 @@ function OrderRulesPanel({
           <MessageSquareText size={16} />
           <span>
             <strong>Order Rules</strong>
-            <small>Chat builder</small>
+            <small>Step builder</small>
           </span>
         </button>
         <button
@@ -2632,6 +2685,26 @@ function OrderRulesPanel({
           <span>
             <strong>Live Draft</strong>
             <small>{generatedWorkflow ? `${countWorkflowRules(generatedWorkflow.workflow.states)} rules` : "No draft yet"}</small>
+          </span>
+        </button>
+        <button
+          className={`workflow-builder-tab${activeBuilderTab === "test" ? " is-active" : ""}`}
+          type="button"
+          role="tab"
+          aria-selected={activeBuilderTab === "test"}
+          aria-controls="workflow-builder-test"
+          id="workflow-builder-tab-test"
+          disabled={!generatedWorkflow}
+          onClick={() => {
+            if (generatedWorkflow) {
+              setActiveBuilderTab("test");
+            }
+          }}
+        >
+          <Play size={16} />
+          <span>
+            <strong>Test Flow</strong>
+            <small>{generatedWorkflow ? "Traverse tree" : "No draft yet"}</small>
           </span>
         </button>
       </div>
@@ -2674,7 +2747,7 @@ function OrderRulesPanel({
                   </div>
                   <WorkflowBuildProgress
                     elapsedSeconds={buildElapsedSeconds}
-                    isRefiningWorkflow={Boolean(generatedWorkflow)}
+                    isRefiningWorkflow={isRefiningBuild}
                   />
                 </div>
               </article>
@@ -2683,14 +2756,15 @@ function OrderRulesPanel({
 
           <div className="workflow-composer">
             <label className="field-label" htmlFor="workflow-builder-prompt">
-              Message builder
+              {isSetupComplete ? "Setup complete" : currentSetupStep.title}
             </label>
             <div className="workflow-starter-bubbles" aria-label="Starter prompts">
-              {workflowStarterPrompts.map((prompt) => (
+              {currentSetupStep.suggestions.map((prompt) => (
                 <button
                   className="workflow-starter-bubble"
                   key={prompt}
                   type="button"
+                  disabled={isSetupComplete || generateMutation.isPending}
                   onClick={() => setBuilderPrompt(prompt)}
                 >
                   {prompt}
@@ -2703,33 +2777,34 @@ function OrderRulesPanel({
               value={builderPrompt}
               onChange={(event) => setBuilderPrompt(event.target.value)}
               onKeyDown={handleBuilderPromptKeyDown}
+              disabled={isSetupComplete || generateMutation.isPending}
               placeholder={
-                generatedWorkflow
-                  ? "Example: Add PayLah as payment evidence."
-                  : "Describe the business context: products, payment methods, and what should count as a captured order."
+                isSetupComplete
+                  ? "Start over to rebuild the deterministic rule flow."
+                  : currentSetupStep.placeholder
               }
             />
             <div className="workflow-composer-actions">
               <button
                 className="secondary-button workflow-clear-button"
                 type="button"
-                onClick={() => setChatMessages(createInitialWorkflowChatMessages())}
+                onClick={resetWorkflowSetup}
               >
-                Clear chat
+                Start over
               </button>
               <button
                 className="primary-button workflow-send-button"
                 type="button"
-                disabled={generateMutation.isPending || !builderPrompt.trim()}
+                disabled={generateMutation.isPending || isSetupComplete || !builderPrompt.trim()}
                 onClick={() => void submitBuilderPrompt()}
               >
-                {generateMutation.isPending ? <Loader2 className="spin" size={18} /> : <Sparkles size={18} />}
-                {generatedWorkflow ? "Update workflow" : "Generate workflow"}
+                {generateMutation.isPending ? <Loader2 className="spin" size={18} /> : <ArrowRight size={18} />}
+                {generateMutation.isPending ? "Building" : isFinalSetupStep ? "Build rule draft" : "Next step"}
               </button>
             </div>
           </div>
         </div>
-      ) : (
+      ) : activeBuilderTab === "draft" ? (
         <div
           className="workflow-builder-tab-panel"
           id="workflow-builder-draft"
@@ -2751,6 +2826,19 @@ function OrderRulesPanel({
           ) : null}
           {publishNotice ? <p className="panel-copy">{publishNotice}</p> : null}
           {publishMutation.error ? <ErrorNotice message={publishMutation.error.message} /> : null}
+        </div>
+      ) : (
+        <div
+          className="workflow-builder-tab-panel"
+          id="workflow-builder-test"
+          role="tabpanel"
+          aria-labelledby="workflow-builder-tab-test"
+        >
+          <WorkflowTestPanel
+            businessDescription={businessDescription}
+            generatedWorkflow={generatedWorkflow}
+            shopBranding={shopBranding}
+          />
         </div>
       )}
     </section>
@@ -2816,6 +2904,514 @@ function WorkflowBuildProgress({
       </ol>
     </div>
   );
+}
+
+function WorkflowTestPanel({
+  businessDescription,
+  generatedWorkflow,
+  shopBranding
+}: {
+  businessDescription: string;
+  generatedWorkflow: WorkflowGeneration | null;
+  shopBranding: ShopBranding;
+}) {
+  const products = inferOrderFlowProducts(businessDescription, generatedWorkflow);
+  const categories = buildOrderFlowCategories(products);
+  const [step, setStep] = useStateValue<CustomerOrderBotStep>("category");
+  const [selectedCategoryId, setSelectedCategoryId] = useStateValue("");
+  const [quantities, setQuantities] = useStateValue<Record<string, number>>({});
+  const [uploadedProofName, setUploadedProofName] = useStateValue("");
+
+  useEffect(() => {
+    setStep("category");
+    setSelectedCategoryId("");
+    setQuantities({});
+    setUploadedProofName("");
+  }, [
+    businessDescription,
+    generatedWorkflow?.workflow.id,
+    generatedWorkflow?.workflow.version,
+    setQuantities,
+    setSelectedCategoryId,
+    setStep,
+    setUploadedProofName
+  ]);
+
+  if (!generatedWorkflow) {
+    return (
+      <div className="workflow-test-empty">
+        <Play size={18} />
+        <p>Build a live rule draft first, then preview the deterministic customer order path here.</p>
+      </div>
+    );
+  }
+
+  const selectedCategory = categories.find((category) => category.id === selectedCategoryId) ?? categories[0];
+  const selectedProducts = selectedCategory?.products ?? products;
+  const selectedLines = selectedProducts
+    .map((product) => ({ product, quantity: quantities[product.name] ?? 0 }))
+    .filter((line) => line.quantity > 0);
+  const totalUnits = selectedLines.reduce((total, line) => total + line.quantity, 0);
+  const hasPaymentDetails = Boolean(
+    shopBranding.payment_instructions ||
+      shopBranding.paynow_number ||
+      shopBranding.paynow_qr_image ||
+      shopBranding.bank_name ||
+      shopBranding.bank_account_number
+  );
+
+  function chooseCategory(categoryId: string) {
+    setSelectedCategoryId(categoryId);
+    setQuantities({});
+    setUploadedProofName("");
+    setStep("quantity");
+  }
+
+  function updateQuantity(productName: string, nextQuantity: number) {
+    setQuantities((current) => ({
+      ...current,
+      [productName]: Math.max(0, Math.min(99, nextQuantity))
+    }));
+  }
+
+  function restartCustomerPath() {
+    setStep("category");
+    setSelectedCategoryId("");
+    setQuantities({});
+    setUploadedProofName("");
+  }
+
+  function goBack() {
+    if (step === "quantity") {
+      setStep("category");
+      return;
+    }
+
+    if (step === "payment") {
+      setStep("quantity");
+      return;
+    }
+
+    if (step === "fulfilled") {
+      setStep("payment");
+      setUploadedProofName("");
+    }
+  }
+
+  function handlePaymentProofChange(event: React.ChangeEvent<HTMLInputElement>) {
+    const file = event.currentTarget.files?.[0];
+
+    if (!file) {
+      return;
+    }
+
+    setUploadedProofName(file.name);
+    setStep("fulfilled");
+  }
+
+  return (
+    <div className="workflow-test-panel">
+      <section className="workflow-traversal workflow-customer-bot" aria-labelledby="workflow-customer-heading">
+        <div className="workflow-test-heading">
+          <div>
+            <span className="muted-label">Customer decision tree</span>
+            <strong id="workflow-customer-heading">{generatedWorkflow.workflow.name}</strong>
+          </div>
+          <span>Deterministic only</span>
+        </div>
+
+        <div className="workflow-customer-path" aria-label="Customer order progress">
+          {customerOrderBotSteps.map((botStep) => (
+            <span
+              className={[
+                "workflow-customer-path-step",
+                getCustomerPathStepState(step, botStep.id) === "done" ? "is-done" : "",
+                getCustomerPathStepState(step, botStep.id) === "active" ? "is-active" : ""
+              ]
+                .filter(Boolean)
+                .join(" ")}
+              key={botStep.id}
+            >
+              {botStep.label}
+            </span>
+          ))}
+        </div>
+
+        <article className="workflow-customer-screen">
+          <div className="workflow-customer-question">
+            <span className="workflow-traversal-node-icon" aria-hidden="true">
+              {step === "fulfilled" ? <CheckCircle2 size={18} /> : <GitBranch size={18} />}
+            </span>
+            <div>
+              <span>{step === "fulfilled" ? "Order fulfilled" : "Current question"}</span>
+              <strong>{formatCustomerOrderPrompt(step, selectedCategory?.label)}</strong>
+              <p>{formatCustomerOrderHelp(step)}</p>
+            </div>
+          </div>
+
+          {step === "category" ? (
+            <div className="workflow-customer-options" aria-label="Product category choices">
+              {categories.map((category) => (
+                <button
+                  className="workflow-customer-option"
+                  key={category.id}
+                  type="button"
+                  onClick={() => chooseCategory(category.id)}
+                >
+                  <span>{category.label}</span>
+                  <small>{category.products.map((product) => product.name).join(", ")}</small>
+                  <b>
+                    Choose this
+                    <ArrowRight size={14} />
+                  </b>
+                </button>
+              ))}
+            </div>
+          ) : null}
+
+          {step === "quantity" ? (
+            <>
+              <div className="workflow-quantity-grid" aria-label="Quantity choices">
+                {selectedProducts.map((product) => {
+                  const quantity = quantities[product.name] ?? 0;
+
+                  return (
+                    <div className="workflow-quantity-card" key={product.name}>
+                      <div>
+                        <span>{formatOrderFlowProductGroup(product.group)}</span>
+                        <strong>{product.name}</strong>
+                      </div>
+                      <div className="workflow-quantity-controls">
+                        <button
+                          aria-label={`Decrease ${product.name}`}
+                          type="button"
+                          disabled={quantity <= 0}
+                          onClick={() => updateQuantity(product.name, quantity - 1)}
+                        >
+                          <Minus size={15} />
+                        </button>
+                        <span>{quantity}</span>
+                        <button
+                          aria-label={`Increase ${product.name}`}
+                          type="button"
+                          onClick={() => updateQuantity(product.name, quantity + 1)}
+                        >
+                          <Plus size={15} />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="workflow-customer-actions">
+                <button className="secondary-button" type="button" onClick={goBack}>
+                  Back
+                </button>
+                <button className="primary-button" type="button" disabled={!totalUnits} onClick={() => setStep("payment")}>
+                  Continue to payment
+                </button>
+              </div>
+            </>
+          ) : null}
+
+          {step === "payment" ? (
+            <div className="workflow-payment-step">
+              <OrderFlowSummary selectedLines={selectedLines} />
+
+              <div className="workflow-payment-details">
+                <div>
+                  <span>Payment instructions</span>
+                  <strong>{shopBranding.payment_instructions || "Pay by PayNow or bank transfer, then upload proof."}</strong>
+                </div>
+
+                {shopBranding.paynow_number ? (
+                  <div>
+                    <span>PayNow</span>
+                    <strong>{shopBranding.paynow_number}</strong>
+                  </div>
+                ) : null}
+
+                {shopBranding.paynow_qr_image ? (
+                  <img alt="PayNow QR" src={shopBranding.paynow_qr_image} />
+                ) : null}
+
+                {shopBranding.bank_name || shopBranding.bank_account_number ? (
+                  <div>
+                    <span>Bank transfer</span>
+                    <strong>
+                      {[shopBranding.bank_name, shopBranding.bank_account_name, shopBranding.bank_account_number]
+                        .filter(Boolean)
+                        .join(" / ")}
+                    </strong>
+                  </div>
+                ) : null}
+
+                {!hasPaymentDetails ? (
+                  <p className="workflow-payment-missing">Add payment details in Shop Branding before publishing this flow.</p>
+                ) : null}
+              </div>
+
+              <label className="workflow-proof-upload">
+                <Upload size={20} />
+                <span>Upload payment screenshot</span>
+                <small>The preview fulfils the order only after proof is attached.</small>
+                <input accept="image/*,.pdf" type="file" onChange={handlePaymentProofChange} />
+              </label>
+
+              <div className="workflow-customer-actions">
+                <button className="secondary-button" type="button" onClick={goBack}>
+                  Back
+                </button>
+                <button className="secondary-button" type="button" onClick={restartCustomerPath}>
+                  Restart
+                </button>
+              </div>
+            </div>
+          ) : null}
+
+          {step === "fulfilled" ? (
+            <div className="workflow-fulfilled-step">
+              <div className="workflow-fulfilled-badge">
+                <CheckCircle2 size={20} />
+                <span>Order fulfilled</span>
+              </div>
+              <OrderFlowSummary selectedLines={selectedLines} />
+              <p>Payment proof attached: {uploadedProofName}</p>
+              <div className="workflow-customer-actions">
+                <button className="secondary-button" type="button" onClick={goBack}>
+                  Change proof
+                </button>
+                <button className="primary-button" type="button" onClick={restartCustomerPath}>
+                  Start another order
+                </button>
+              </div>
+            </div>
+          ) : null}
+        </article>
+      </section>
+    </div>
+  );
+}
+
+function OrderFlowSummary({
+  selectedLines
+}: {
+  selectedLines: Array<{ product: OrderFlowProduct; quantity: number }>;
+}) {
+  return (
+    <div className="workflow-order-summary">
+      <span>Order summary</span>
+      {selectedLines.length ? (
+        <ul>
+          {selectedLines.map((line) => (
+            <li key={line.product.name}>
+              <strong>{line.product.name}</strong>
+              <span>x {line.quantity}</span>
+            </li>
+          ))}
+        </ul>
+      ) : (
+        <p>No items selected yet.</p>
+      )}
+    </div>
+  );
+}
+
+type CustomerOrderBotStep = "category" | "quantity" | "payment" | "fulfilled";
+type CustomerPathStepState = "todo" | "active" | "done";
+type OrderFlowProductGroup = "drinks" | "desserts" | "items";
+type OrderFlowProduct = {
+  group: OrderFlowProductGroup;
+  name: string;
+};
+type OrderFlowCategory = {
+  id: string;
+  label: string;
+  products: OrderFlowProduct[];
+};
+
+const customerOrderBotSteps: Array<{ id: CustomerOrderBotStep; label: string }> = [
+  { id: "category", label: "Choose items" },
+  { id: "quantity", label: "Quantity" },
+  { id: "payment", label: "Payment proof" },
+  { id: "fulfilled", label: "Fulfilled" }
+];
+
+function getCustomerPathStepState(currentStep: CustomerOrderBotStep, targetStep: CustomerOrderBotStep): CustomerPathStepState {
+  const currentIndex = customerOrderBotSteps.findIndex((step) => step.id === currentStep);
+  const targetIndex = customerOrderBotSteps.findIndex((step) => step.id === targetStep);
+
+  if (currentStep === "fulfilled" && targetIndex <= currentIndex) {
+    return "done";
+  }
+
+  if (targetIndex < currentIndex) {
+    return "done";
+  }
+
+  if (targetIndex === currentIndex) {
+    return "active";
+  }
+
+  return "todo";
+}
+
+function formatCustomerOrderPrompt(step: CustomerOrderBotStep, categoryLabel?: string) {
+  if (step === "category") {
+    return "What would you like to buy today?";
+  }
+
+  if (step === "quantity") {
+    return `How many ${categoryLabel?.toLowerCase() ?? "items"} would you like?`;
+  }
+
+  if (step === "payment") {
+    return "Please pay, then upload your payment screenshot.";
+  }
+
+  return "Payment proof received.";
+}
+
+function formatCustomerOrderHelp(step: CustomerOrderBotStep) {
+  if (step === "category") {
+    return "Pick one option to continue.";
+  }
+
+  if (step === "quantity") {
+    return "Use the quantity controls before payment is shown.";
+  }
+
+  if (step === "payment") {
+    return "Upload a screenshot or receipt after payment.";
+  }
+
+  return "The order is complete in this preview.";
+}
+
+function inferOrderFlowProducts(businessDescription: string, generatedWorkflow: WorkflowGeneration | null): OrderFlowProduct[] {
+  const sellerSegment =
+    businessDescription.match(/seller sells:\s*([^.\n]+)/i)?.[1] ??
+    businessDescription.match(/selling\s+([^.\n]+)/i)?.[1] ??
+    businessDescription;
+  const explicitProducts = sellerSegment
+    .split(/,|\band\b|&|\+|\//i)
+    .map(normalizeOrderFlowProductName)
+    .filter((product) => product && !/customer|payment|paynow|bank|capture|order/i.test(product));
+  const searchText = `${businessDescription} ${(generatedWorkflow?.test_inputs ?? []).join(" ")}`.toLowerCase();
+  const knownProducts = [
+    "egg tarts",
+    "egg tart",
+    "bandung",
+    "lemonade",
+    "lemons",
+    "cakes",
+    "cake",
+    "brownies",
+    "brownie",
+    "cookies",
+    "cookie",
+    "kopi",
+    "teh",
+    "kaya toast"
+  ].filter((product) => searchText.includes(product));
+  const productNames = dedupeOrderFlowProductNames([...explicitProducts, ...knownProducts].map(normalizeOrderFlowProductName));
+  const fallbackProducts = ["egg tarts", "bandung", "lemonade"];
+
+  return (productNames.length ? productNames : fallbackProducts).map((name) => ({
+    group: classifyOrderFlowProduct(name),
+    name
+  }));
+}
+
+function buildOrderFlowCategories(products: OrderFlowProduct[]): OrderFlowCategory[] {
+  const drinks = products.filter((product) => product.group === "drinks");
+  const desserts = products.filter((product) => product.group === "desserts");
+  const items = products.filter((product) => product.group === "items");
+  const categories: OrderFlowCategory[] = [];
+
+  if (drinks.length) {
+    categories.push({ id: "drinks", label: "Drinks", products: drinks });
+  }
+
+  if (desserts.length) {
+    categories.push({ id: "desserts", label: "Desserts", products: desserts });
+  }
+
+  if (drinks.length && desserts.length) {
+    categories.push({ id: "both", label: "Drinks and desserts", products: [...desserts, ...drinks] });
+  }
+
+  if (items.length) {
+    categories.push({ id: "items", label: "Other items", products: items });
+  }
+
+  if (!categories.length || categories.length === 1) {
+    return [{ id: "all", label: "All items", products }];
+  }
+
+  return categories;
+}
+
+function normalizeOrderFlowProductName(value: string) {
+  const normalized = value
+    .trim()
+    .toLowerCase()
+    .replace(/^(?:seller sells:|selling)\s+/i, "")
+    .replace(/^\d+\s+/, "")
+    .replace(/[.?!:;]+$/g, "")
+    .replace(/\s+/g, " ");
+
+  if (!normalized) {
+    return "";
+  }
+
+  const aliases: Record<string, string> = {
+    brownie: "brownies",
+    cake: "cakes",
+    cookie: "cookies",
+    "egg tart": "egg tarts",
+    lemonades: "lemonade",
+    lemons: "lemonade"
+  };
+
+  return aliases[normalized] ?? normalized;
+}
+
+function dedupeOrderFlowProductNames(products: string[]) {
+  const seen = new Set<string>();
+
+  return products.filter((product) => {
+    if (!product || seen.has(product)) {
+      return false;
+    }
+
+    seen.add(product);
+    return true;
+  });
+}
+
+function classifyOrderFlowProduct(productName: string): OrderFlowProductGroup {
+  if (/(bandung|lemonade|drink|kopi|teh|coffee|tea|juice|milk|latte|soda)/i.test(productName)) {
+    return "drinks";
+  }
+
+  if (/(tart|cake|brownie|cookie|dessert|pastry|toast|bread|kueh|muffin|pudding)/i.test(productName)) {
+    return "desserts";
+  }
+
+  return "items";
+}
+
+function formatOrderFlowProductGroup(group: OrderFlowProductGroup) {
+  if (group === "drinks") {
+    return "Drink";
+  }
+
+  if (group === "desserts") {
+    return "Dessert";
+  }
+
+  return "Item";
 }
 
 function ShopBrandingPanel({
@@ -3813,6 +4409,8 @@ function DecisionTreePreview({ generatedWorkflow }: { generatedWorkflow: Workflo
   const workflow = generatedWorkflow.workflow;
   const stateEntries = Object.entries(workflow.states);
   const explanations = new Map(generatedWorkflow.rule_explanations.map((item) => [item.rule_id, item.explanation]));
+  const reachableStateIds = collectReachableWorkflowStateIds(workflow);
+  const detachedStateEntries = stateEntries.filter(([stateId]) => !reachableStateIds.has(stateId));
 
   return (
     <div className="decision-tree-preview" aria-label="Generated decision tree preview">
@@ -3820,59 +4418,302 @@ function DecisionTreePreview({ generatedWorkflow }: { generatedWorkflow: Workflo
         <span className="muted-label">Decision tree</span>
         <strong>Start: {workflow.start}</strong>
       </div>
-      <div className="workflow-node-canvas">
-        {stateEntries.map(([stateId, state]) => (
-          <article
-            className={`workflow-node-card is-${state.type}${stateId === workflow.start ? " is-start" : ""}`}
-            key={stateId}
-          >
-            <span className="workflow-node-port is-input" aria-hidden="true" />
-            <span className="workflow-node-port is-output" aria-hidden="true" />
-            <div className="workflow-node-header">
-              <span className="workflow-node-icon">
-                {isDecisionState(state) ? <GitBranch size={15} /> : <CheckCircle2 size={15} />}
-              </span>
-              <div>
-                <span>{state.type}</span>
-                <strong>{stateId}</strong>
-              </div>
-            </div>
 
-            {isDecisionState(state) ? (
-              <div className="workflow-node-edges">
-                {state.rules.map((rule) => (
-                  <div className="workflow-edge" key={rule.id}>
-                    <code>{rule.id}</code>
-                    <span>{describeWorkflowCondition(rule.if)}</span>
-                    <b>to {rule.then}</b>
-                    {explanations.has(rule.id) ? <small>{explanations.get(rule.id)}</small> : null}
-                  </div>
-                ))}
-                <div className="workflow-edge is-else">
-                  <code>else</code>
-                  <b>to {state.else}</b>
-                </div>
-              </div>
-            ) : (
-              <div className="workflow-action-detail">
-                <span>{formatActionDetails(state)}</span>
-              </div>
-            )}
-          </article>
-        ))}
-      </div>
-      {generatedWorkflow.test_inputs.length ? (
-        <div className="workflow-test-inputs">
-          <span className="muted-label">Suggested test inputs</span>
-          <ul>
-            {generatedWorkflow.test_inputs.slice(0, 3).map((input) => (
-              <li key={input}>{input}</li>
+      <WorkflowDiagram workflow={workflow} explanations={explanations} />
+
+      {detachedStateEntries.length ? (
+        <div className="workflow-detached-states">
+          <span className="muted-label">Detached states</span>
+          <div>
+            {detachedStateEntries.map(([stateId, state]) => (
+              <WorkflowDiagramNode isDetached isStart={false} key={stateId} state={state} stateId={stateId} />
             ))}
-          </ul>
+          </div>
         </div>
       ) : null}
+
     </div>
   );
+}
+
+function WorkflowDiagram({
+  workflow,
+  explanations
+}: {
+  workflow: WorkflowGeneration["workflow"];
+  explanations: Map<string, string>;
+}) {
+  const diagram = buildWorkflowDiagramLayout(workflow, explanations);
+
+  return (
+    <div className="workflow-tree" aria-label="Top to bottom workflow tree">
+      <div className="workflow-diagram" style={{ height: diagram.height, width: diagram.width }}>
+        <svg
+          aria-hidden="true"
+          className="workflow-diagram-lines"
+          height={diagram.height}
+          viewBox={`0 0 ${diagram.width} ${diagram.height}`}
+          width={diagram.width}
+        >
+          <defs>
+            <marker
+              id="workflow-arrow"
+              markerHeight="8"
+              markerWidth="8"
+              orient="auto"
+              refX="7"
+              refY="4"
+              viewBox="0 0 8 8"
+            >
+              <path d="M0,0 L8,4 L0,8 Z" />
+            </marker>
+          </defs>
+          {diagram.edges.map((edge) => (
+            <path
+              className={`workflow-diagram-line is-${edge.type}`}
+              d={edge.path}
+              key={edge.id}
+              markerEnd="url(#workflow-arrow)"
+            />
+          ))}
+        </svg>
+
+        {diagram.edges.map((edge) => (
+          <span
+            className={`workflow-diagram-edge-label is-${edge.type}`}
+            key={`${edge.id}-label`}
+            style={{ left: edge.labelX, top: edge.labelY }}
+            title={`${edge.label}: ${edge.description}. Routes to ${edge.to}`}
+          >
+            {edge.displayLabel}
+          </span>
+        ))}
+
+        {diagram.nodes.map((node) => (
+          <WorkflowDiagramNode
+            isMissing={node.isMissing}
+            isStart={node.isStart}
+            key={node.key}
+            state={node.state}
+            stateId={node.stateId}
+            style={{
+              height: node.height,
+              left: node.x,
+              top: node.y,
+              width: node.width
+            }}
+          />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function WorkflowDiagramNode({
+  stateId,
+  state,
+  isStart,
+  isMissing = false,
+  isDetached = false,
+  style
+}: {
+  stateId: string;
+  state?: WorkflowState;
+  isStart: boolean;
+  isMissing?: boolean;
+  isDetached?: boolean;
+  style?: React.CSSProperties;
+}) {
+  const decisionState = state && isDecisionState(state) ? state : null;
+  const actionState = state && !isDecisionState(state) ? state : null;
+  const branchCount = decisionState ? decisionState.rules.length + 1 : 0;
+
+  return (
+    <article
+      className={`workflow-diagram-node is-${state?.type ?? "missing"}${isStart ? " is-start" : ""}${
+        isMissing ? " is-missing" : ""
+      }${isDetached ? " is-detached" : ""}`}
+      style={style}
+    >
+      <div className="workflow-diagram-node-header">
+        <span className="workflow-diagram-node-icon">
+          {isMissing ? (
+            <AlertCircle size={15} />
+          ) : decisionState ? (
+            <GitBranch size={15} />
+          ) : (
+            <CheckCircle2 size={15} />
+          )}
+        </span>
+        <div>
+          <span>{isMissing ? "Missing" : isStart ? "Root decision" : state?.type}</span>
+          <strong>{stateId}</strong>
+        </div>
+      </div>
+      <p>
+        {isMissing
+          ? "Referenced but not defined"
+          : decisionState
+            ? `${branchCount} outgoing ${branchCount === 1 ? "branch" : "branches"}`
+            : actionState
+              ? formatActionDetails(actionState)
+              : ""}
+      </p>
+    </article>
+  );
+}
+
+type WorkflowTreeEdge = {
+  id: string;
+  type: "rule" | "else";
+  label: string;
+  description: string;
+  explanation?: string;
+  to: string;
+};
+
+type WorkflowDiagramTreeNode = {
+  key: string;
+  stateId: string;
+  state?: WorkflowState;
+  incomingEdge?: WorkflowTreeEdge;
+  children: WorkflowDiagramTreeNode[];
+  depth: number;
+  height: number;
+  isMissing: boolean;
+  isStart: boolean;
+  subtreeWidth: number;
+  width: number;
+  x: number;
+  y: number;
+};
+
+function buildWorkflowDiagramLayout(
+  workflow: WorkflowGeneration["workflow"],
+  explanations: Map<string, string>
+) {
+  const nodeWidth = 226;
+  const nodeHeight = 98;
+  const columnGap = 42;
+  const rowGap = 94;
+  const paddingX = 36;
+  const paddingY = 18;
+  const maxDepth = 9;
+
+  function buildNode(
+    stateId: string,
+    depth: number,
+    path: string[],
+    incomingEdge?: WorkflowTreeEdge
+  ): WorkflowDiagramTreeNode {
+    const state = workflow.states[stateId];
+    const isCycle = path.includes(stateId);
+    const key = `${path.join(">") || "root"}>${incomingEdge?.id ?? "start"}>${stateId}`;
+    const node: WorkflowDiagramTreeNode = {
+      key,
+      stateId,
+      state,
+      incomingEdge,
+      children: [],
+      depth,
+      height: nodeHeight,
+      isMissing: !state,
+      isStart: depth === 0,
+      subtreeWidth: nodeWidth,
+      width: nodeWidth,
+      x: 0,
+      y: 0
+    };
+
+    if (state && isDecisionState(state) && !isCycle && depth < maxDepth) {
+      node.children = getWorkflowTreeEdges(state, explanations).map((edge) =>
+        buildNode(edge.to, depth + 1, [...path, stateId], edge)
+      );
+    }
+
+    return node;
+  }
+
+  function measureNode(node: WorkflowDiagramTreeNode): number {
+    if (!node.children.length) {
+      node.subtreeWidth = nodeWidth;
+      return node.subtreeWidth;
+    }
+
+    const childrenWidth =
+      node.children.reduce((total, child) => total + measureNode(child), 0) +
+      Math.max(0, node.children.length - 1) * columnGap;
+    node.subtreeWidth = Math.max(nodeWidth, childrenWidth);
+    return node.subtreeWidth;
+  }
+
+  function placeNode(node: WorkflowDiagramTreeNode, left: number) {
+    node.x = Math.round(left + node.subtreeWidth / 2 - nodeWidth / 2);
+    node.y = Math.round(paddingY + node.depth * (nodeHeight + rowGap));
+
+    if (!node.children.length) {
+      return;
+    }
+
+    const childrenWidth =
+      node.children.reduce((total, child) => total + child.subtreeWidth, 0) +
+      Math.max(0, node.children.length - 1) * columnGap;
+    let childLeft = left + Math.max(0, (node.subtreeWidth - childrenWidth) / 2);
+
+    node.children.forEach((child) => {
+      placeNode(child, childLeft);
+      childLeft += child.subtreeWidth + columnGap;
+    });
+  }
+
+  function flattenNode(node: WorkflowDiagramTreeNode, nodes: WorkflowDiagramTreeNode[]) {
+    nodes.push(node);
+    node.children.forEach((child) => flattenNode(child, nodes));
+  }
+
+  const root = buildNode(workflow.start, 0, []);
+  measureNode(root);
+  placeNode(root, paddingX);
+
+  const nodes: WorkflowDiagramTreeNode[] = [];
+  flattenNode(root, nodes);
+
+  const edges = nodes.flatMap((node) =>
+    node.children.map((child) => {
+      const edge = child.incomingEdge as WorkflowTreeEdge;
+      const fromX = node.x + nodeWidth / 2;
+      const fromY = node.y + nodeHeight;
+      const toX = child.x + nodeWidth / 2;
+      const toY = child.y;
+      const midY = fromY + Math.min(46, Math.max(30, (toY - fromY) * 0.42));
+
+      return {
+        id: `${node.key}-${edge.id}-${child.key}`,
+        type: edge.type,
+        label: edge.label,
+        displayLabel: formatCompactWorkflowEdgeLabel(edge),
+        description: edge.description,
+        to: edge.to,
+        labelX: Math.round(toX),
+        labelY: Math.round(midY),
+        path: `M ${fromX} ${fromY} V ${midY} H ${toX} V ${toY - 8}`
+      };
+    })
+  );
+  const width = Math.max(720, Math.ceil(root.subtreeWidth + paddingX * 2));
+  const deepestLevel = nodes.reduce((deepest, node) => Math.max(deepest, node.depth), 0);
+  const height = paddingY * 2 + (deepestLevel + 1) * nodeHeight + deepestLevel * rowGap;
+
+  return { edges, height, nodes, width };
+}
+
+function formatCompactWorkflowEdgeLabel(edge: WorkflowTreeEdge) {
+  if (edge.type === "else") {
+    return "else";
+  }
+
+  const label = formatWorkflowToken(edge.label);
+  return label.length > 24 ? `${label.slice(0, 21).trim()}...` : label;
 }
 
 function MetricCard({
@@ -3919,6 +4760,53 @@ function formatActionDetails(state: WorkflowActionState) {
   return state.message ?? "Route to review";
 }
 
+function getWorkflowTreeEdges(state: WorkflowState, explanations: Map<string, string>): WorkflowTreeEdge[] {
+  if (!isDecisionState(state)) {
+    return [];
+  }
+
+  return [
+    ...state.rules.map((rule) => ({
+      id: rule.id,
+      type: "rule" as const,
+      label: rule.id,
+      description: describeWorkflowCondition(rule.if),
+      explanation: explanations.get(rule.id),
+      to: rule.then
+    })),
+    {
+      id: "else",
+      type: "else" as const,
+      label: "else",
+      description: "No rule matched",
+      explanation: undefined,
+      to: state.else
+    }
+  ];
+}
+
+function collectReachableWorkflowStateIds(workflow: WorkflowGeneration["workflow"]) {
+  const reachable = new Set<string>();
+  const queue = [workflow.start];
+
+  while (queue.length) {
+    const stateId = queue.shift() as string;
+
+    if (reachable.has(stateId)) {
+      continue;
+    }
+
+    reachable.add(stateId);
+    const state = workflow.states[stateId];
+
+    if (state && isDecisionState(state)) {
+      queue.push(...state.rules.map((rule) => rule.then), state.else);
+    }
+  }
+
+  return reachable;
+}
+
 function countDecisionStates(states: Record<string, WorkflowState>) {
   return Object.values(states).filter(isDecisionState).length;
 }
@@ -3929,18 +4817,38 @@ function countWorkflowRules(states: Record<string, WorkflowState>) {
 
 function formatGenerationMode(mode?: WorkflowGeneration["generation_mode"]) {
   if (mode === "openai") {
-    return "AI draft";
+    return "Rule draft";
   }
 
   if (mode === "local_template") {
-    return "Local tree";
+    return "Deterministic";
   }
 
   if (mode === "local_refine") {
-    return "Local refine";
+    return "Deterministic edit";
   }
 
-  return "Default";
+  return "Deterministic";
+}
+
+function formatWorkflowRunStatus(status: ProcessResult["status"]) {
+  if (status === "created") {
+    return "Paid order captured";
+  }
+
+  if (status === "updated") {
+    return "Payment status updated";
+  }
+
+  if (status === "follow_up") {
+    return "Follow-up needed";
+  }
+
+  return "Needs review";
+}
+
+function formatWorkflowToken(value: string) {
+  return value.replace(/_/g, " ");
 }
 
 function describeWorkflowCondition(condition: WorkflowCondition) {
@@ -4454,10 +5362,16 @@ async function readApiError(response: Response) {
 
 function formatWorkflowGenerateError(error: Error) {
   if (/gpt-api-key|openai api key|api key/i.test(error.message)) {
-    return `${error.message} Add GPT-API-KEY in backend/.env to enable AI-assisted generation.`;
+    return `${error.message} Disable WORKFLOW_BUILDER_MODE=openai or configure the API key for explicit OpenAI workflow drafting.`;
   }
 
   return error.message;
+}
+
+function createEmptyWorkflowSetupAnswers(): WorkflowSetupAnswers {
+  return {
+    products: ""
+  };
 }
 
 function createInitialWorkflowChatMessages(): WorkflowChatMessage[] {
@@ -4465,11 +5379,25 @@ function createInitialWorkflowChatMessages(): WorkflowChatMessage[] {
     {
       id: "workflow-builder-welcome",
       role: "assistant",
-      content:
-        "First, tell me the business context: what the seller sells, how customers pay, and what should count as a captured order. I will turn that into deterministic workflow JSON.",
+      content: buildWorkflowSetupQuestion(0),
       createdAt: new Date().toISOString()
     }
   ];
+}
+
+function buildWorkflowSetupQuestion(stepIndex: number) {
+  const step = workflowSetupSteps[stepIndex];
+  return `${step.title}\n${step.question}`;
+}
+
+function buildWorkflowSetupContext(answers: WorkflowSetupAnswers) {
+  return [
+    `Seller sells: ${answers.products}.`,
+    "Accepted payment evidence is fixed by the platform: the customer must pay and upload a screenshot or receipt of the completed payment.",
+    "Sales capture rule is fixed by the platform: capture or fulfill the order only when order content and uploaded payment proof are both present.",
+    "If order content is present but uploaded payment proof is missing, ask for payment proof. Do not let merchants configure this policy.",
+    "Build only explicit deterministic keyword, regex, amount, and branch rules."
+  ].join(" ");
 }
 
 function loadWorkflowChatHistory() {
@@ -4505,11 +5433,11 @@ function createWorkflowChatId(prefix: string) {
 
 function buildWorkflowAssistantReply(result: WorkflowGeneration, hadExistingWorkflow: boolean) {
   const workflow = result.workflow;
-  const action = hadExistingWorkflow ? "Updated" : "Built";
+  const action = hadExistingWorkflow ? "Rebuilt" : "Built";
   const decisionCount = countDecisionStates(workflow.states);
   const ruleCount = countWorkflowRules(workflow.states);
 
-  return `${action} ${workflow.name} v${workflow.version}. I found ${decisionCount} decision nodes and ${ruleCount} rules, starting at ${workflow.start}. Missing payment evidence routes to follow-up, so sales captures stay paid-only.`;
+  return `${action} ${workflow.name} v${workflow.version} from the product list and fixed platform payment policy. It has ${decisionCount} decision nodes and ${ruleCount} deterministic rules, starting at ${workflow.start}. Missing uploaded payment proof routes to follow-up, so sales captures stay paid-only.`;
 }
 
 function formatAmount(value: number | null, currency: string) {
