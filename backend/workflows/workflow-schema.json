@@ -1,0 +1,163 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://zorder.local/schemas/workflow.schema.json",
+  "title": "zorder Workflow",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "name", "version", "start", "states"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "name": {
+      "type": "string",
+      "minLength": 1
+    },
+    "version": {
+      "type": "integer",
+      "minimum": 1
+    },
+    "start": {
+      "type": "string",
+      "minLength": 1
+    },
+    "states": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "oneOf": [
+          {
+            "$ref": "#/$defs/decisionState"
+          },
+          {
+            "$ref": "#/$defs/actionState"
+          }
+        ]
+      }
+    }
+  },
+  "$defs": {
+    "decisionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "rules", "else"],
+      "properties": {
+        "type": {
+          "const": "decision"
+        },
+        "rules": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "$ref": "#/$defs/rule"
+          }
+        },
+        "else": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "rule": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "if", "then"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "minLength": 1
+        },
+        "if": {
+          "$ref": "#/$defs/condition"
+        },
+        "then": {
+          "type": "string",
+          "minLength": 1
+        }
+      }
+    },
+    "condition": {
+      "type": "object",
+      "additionalProperties": false,
+      "minProperties": 1,
+      "properties": {
+        "containsAny": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "containsAll": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        },
+        "matchesRegex": {
+          "type": "string",
+          "minLength": 1
+        },
+        "amountDetected": {
+          "type": "boolean"
+        }
+      }
+    },
+    "actionState": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "action"],
+      "properties": {
+        "type": {
+          "const": "action"
+        },
+        "action": {
+          "enum": [
+            "create_order",
+            "update_payment_status",
+            "needs_review",
+            "ask_follow_up"
+          ]
+        },
+        "payment_status": {
+          "enum": ["unpaid", "partial", "paid", "unknown"]
+        },
+        "message": {
+          "type": "string"
+        },
+        "required_fields": {
+          "type": "array",
+          "items": {
+            "enum": [
+              "customer_name",
+              "customer_handle",
+              "order_summary",
+              "items",
+              "total_amount",
+              "payment_status"
+            ]
+          }
+        }
+      },
+      "allOf": [
+        {
+          "if": {
+            "properties": {
+              "action": {
+                "const": "update_payment_status"
+              }
+            },
+            "required": ["action"]
+          },
+          "then": {
+            "required": ["payment_status"]
+          }
+        }
+      ]
+    }
+  }
+}

@@ -1,0 +1,74 @@
+{
+  "id": "default-order-flow",
+  "name": "Default Order Flow",
+  "version": 1,
+  "start": "detect_intent",
+  "states": {
+    "detect_intent": {
+      "type": "decision",
+      "rules": [
+        {
+          "id": "order_request",
+          "if": {
+            "containsAny": ["want", "buy", "reserve", "take", "can i get"]
+          },
+          "then": "create_order"
+        },
+        {
+          "id": "payment_update",
+          "if": {
+            "containsAny": ["paid", "paynow", "transferred", "transfer done", "sent receipt"]
+          },
+          "then": "mark_paid"
+        },
+        {
+          "id": "partial_payment_update",
+          "if": {
+            "containsAny": ["deposit", "half paid", "partial", "balance"]
+          },
+          "then": "mark_partial"
+        },
+        {
+          "id": "explicit_order_request",
+          "if": {
+            "containsAny": ["order"]
+          },
+          "then": "create_order"
+        },
+        {
+          "id": "priced_message",
+          "if": {
+            "amountDetected": true
+          },
+          "then": "ask_order_confirmation"
+        }
+      ],
+      "else": "needs_review"
+    },
+    "create_order": {
+      "type": "action",
+      "action": "create_order"
+    },
+    "mark_paid": {
+      "type": "action",
+      "action": "update_payment_status",
+      "payment_status": "paid"
+    },
+    "mark_partial": {
+      "type": "action",
+      "action": "update_payment_status",
+      "payment_status": "partial"
+    },
+    "ask_order_confirmation": {
+      "type": "action",
+      "action": "ask_follow_up",
+      "message": "I found an amount, but I need to confirm whether this is an order.",
+      "required_fields": ["order_summary"]
+    },
+    "needs_review": {
+      "type": "action",
+      "action": "needs_review",
+      "message": "This input did not match an order or payment rule."
+    }
+  }
+}
