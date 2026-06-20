@@ -1,2 +1,3 @@
-# zo-order-tracker
-A simple Agentic Chat Order &amp; Payment Tracker for home businesses
+# zorder
+
+A simple agentic Telegram order and payment tracker for home businesses.

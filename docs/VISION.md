@@ -1,29 +1,39 @@
-Problem
-orders can be messy and hard to track
-payment tracking is manual
-users still prefer to send / receive orders via chat
-Solution
+# zorder Vision
 
-A simple WhatsApp Order Tracker.
+## Problem
 
-Free Version
-Owner pastes WhatsApp chat into website
-AI extracts order + payment status
-Zo powers the backend
-Owner sees simple order dashboard
-Premium Version
-Owner connects WhatsApp Business
-Orders are captured automatically
-WhatsApp Business cost is paid by the owner, not you
-Positioning
+- Orders are messy and hard to track.
+- Payment tracking is manual.
+- Many small business owners still prefer to send and receive orders through Telegram.
 
-Not a CRM. Just a simple order and payment tracker for WhatsApp-based home businesses.
+## Solution
 
-MVP
+zorder is a simple Telegram order and payment tracker for home businesses.
+
+Tagline: Turn Telegram orders into a simple paid/unpaid dashboard.
+
+## Free Version
+
+- Owner pastes a Telegram chat into the website.
+- AI extracts the order details and payment status.
+- Zo powers the backend.
+- Owner sees a simple order dashboard.
+
+## Premium Version
+
+- Owner connects a Telegram bot.
+- Orders are captured automatically.
+- Telegram bot usage costs are paid by the owner, not by Zo.
+
+## Positioning
+
+Not a CRM. Just a simple order and payment tracker for Telegram-based home businesses.
+
+## MVP Scope
 
 Build only:
 
-paste chat
-extract order
-track paid / unpaid
-simple dashboard
+- Paste Telegram chat.
+- Extract order.
+- Track paid and unpaid orders.
+- Simple dashboard.
