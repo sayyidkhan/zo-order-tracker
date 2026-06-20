@@ -138,7 +138,8 @@
               "order_summary",
               "items",
               "total_amount",
-              "payment_status"
+              "payment_status",
+              "payment_evidence"
             ]
           }
         }

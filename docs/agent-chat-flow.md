@@ -18,9 +18,9 @@ The agent chat should help a home business owner turn messy messages into tracka
 | --- | --- | --- | --- |
 | `idle` | Owner opens chat | Offer to process an order note or test workflow rules. | Empty draft |
 | `collect_input` | Owner pastes messy order text | Send text to workflow runner. | Raw source input |
-| `show_result` | Workflow returns result | Summarize detected order, items, amount, and payment status. | Structured preview |
+| `show_result` | Workflow returns result | Summarize detected paid order, items, amount, and payment evidence. | Structured preview |
 | `ask_follow_up` | Required fields are missing | Ask one focused question. | Missing field request |
-| `confirm_save` | Result is good enough | Ask owner to save or edit. | Pending order |
+| `confirm_save` | Result is good enough | Ask owner to save or edit. | Paid capture draft |
 | `needs_review` | Workflow cannot classify input | Explain why and suggest manual fields. | Review draft |
 | `workflow_setup` | Owner wants custom rules | Collect business type, common products, payment phrases, and ambiguous cases. | Starter workflow JSON |
 
@@ -33,17 +33,17 @@ The agent chat should help a home business owner turn messy messages into tracka
    - order summary
    - items
    - amount
-   - payment status
+   - payment evidence
    - explanation
 4. Owner confirms, edits, or marks for review.
-5. Saved orders appear in the dashboard.
+5. Saved paid captures appear in the dashboard.
 
 ## Message Templates
 
 ### Successful Order Detection
 
 ```text
-I found 1 order: {order_summary}. Payment looks {payment_status}. I matched this because {explanation}
+I found 1 paid order capture: {order_summary}. I matched this because {explanation}
 ```
 
 ### Missing Details
@@ -61,7 +61,7 @@ I could not confidently classify this as an order or payment update. I marked it
 ### Payment Update
 
 ```text
-Payment status updated to {payment_status}. Reason: {explanation}
+Payment evidence updated to paid. Reason: {explanation}
 ```
 
 ## Setup Flow For Optional AI Assistance
@@ -73,8 +73,8 @@ Questions to ask:
 1. What do you sell?
 2. What are 3 common order messages you receive?
 3. What words usually mean the customer has paid?
-4. What words mean they will pay later?
-5. What details must every order have before you save it?
+4. What payment evidence must exist before you save a sales capture?
+5. What details must every paid order have before you save it?
 
 Generated output:
 

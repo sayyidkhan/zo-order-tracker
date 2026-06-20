@@ -4,9 +4,11 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "node --watch src/server.js",
-    "start": "node src/server.js",
-    "test": "node src/workflow-runner.test.js"
+    "dev": "node --no-warnings --watch src/server.js",
+    "start": "node --no-warnings src/server.js",
+    "seed:users": "node scripts/seed-users.js",
+    "seed:demo": "node --no-warnings scripts/seed-demo-data.js",
+    "test": "node src/workflow-runner.test.js && node src/workflow-builder.test.js"
   },
   "dependencies": {
     "cors": "^2.8.5",

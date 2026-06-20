@@ -8,16 +8,16 @@
 
 ## Solution
 
-zorder is a simple web-based order and payment tracker for home businesses.
+zorder is a simple web-based paid order capture tracker for home businesses.
 
-Tagline: Turn messy orders into a simple paid/unpaid dashboard.
+Tagline: Turn messy paid orders into a clear sales capture dashboard.
 
 ## Free Version
 
 - Owner enters or imports order details into the web app.
-- zorder applies a deterministic workflow to classify order and payment status.
+- zorder applies a deterministic workflow to classify paid order captures and missing payment evidence.
 - Zo powers the backend.
-- Owner sees a simple order dashboard.
+- Owner sees a simple dated sales capture dashboard.
 
 ## Premium Version
 
@@ -27,13 +27,13 @@ Tagline: Turn messy orders into a simple paid/unpaid dashboard.
 
 ## Positioning
 
-Not a CRM. Just a simple order and payment tracker for home businesses.
+Not a CRM. Just a simple paid order capture tracker for home businesses.
 
 ## MVP Scope
 
 Build only:
 
 - Enter or import order details.
-- Classify order and payment status with JSON workflows.
-- Track paid and unpaid orders.
-- Simple dashboard.
+- Classify paid captures and evidence follow-up with JSON workflows.
+- Track paid orders by capture date.
+- Simple sales dashboard.

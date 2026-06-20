@@ -6,13 +6,14 @@ product
 
 ## Users
 
-Home business owners who receive messy order notes through messages and need a fast way to turn them into trackable paid/unpaid orders. They are likely multitasking between production, customer replies, and payment checks, so the interface should reduce sorting work rather than add admin overhead.
+- **Merchants** configure products, order rules, branding, and review all orders in `/admin`.
+- **Customers** browse the menu, place orders, and track their own order history in `/user` after sign-in.
 
 ## Product Purpose
 
-zorder is a simple web-based order and payment tracker. It lets an owner paste or enter an order note, classify it through deterministic workflow JSON, review the extracted order, and monitor paid, unpaid, partial, and review-needed orders in one dashboard.
+zorder connects merchant setup to a customer ordering flow. Merchants maintain inventory and deterministic workflow JSON. Customers sign in, pick items from the live menu, pay by PayNow or bank transfer, and place orders that appear in the merchant dashboard.
 
-Success means a seller can process a messy order, understand why it matched a rule, and see the dashboard update without learning a CRM or building workflow logic by hand.
+Success means a customer can complete an order without CRM overhead, while the merchant still sees structured orders and payment status in one place.
 
 ## Brand Personality
 
@@ -31,8 +32,8 @@ The product should feel like a lightweight operations console for a small shop: 
 
 - Lead with the task: the first screen is for processing and tracking orders, not explaining the product.
 - Keep the owner in control: always show extracted fields and the deterministic reason behind a match.
-- Stay lightweight: focus on order entry, payment status, and review flow.
-- Make states visible: paid, unpaid, partial, and needs review should be scannable at a glance.
+- Stay lightweight: focus on paid order entry, payment evidence, and review flow.
+- Make states visible: paid captures, missing evidence, and needs review should be scannable at a glance.
 - Respect the team split: UI supports workflow generation and backend integration without hiding those contracts.
 
 ## Accessibility & Inclusion

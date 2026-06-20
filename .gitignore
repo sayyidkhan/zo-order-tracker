@@ -35,6 +35,7 @@ yarn-error.log*
 
 # env files
 .env*
+!.env.example
 
 # vercel
 .vercel
@@ -48,3 +49,12 @@ next-env.d.ts
 # logs
 /logs
 *.log
+
+# local demo data
+/backend/data/*.json
+/backend/data/*.sqlite
+/backend/data/*.sqlite-*
+!/backend/data/.gitkeep
+
+# local chat/upload screenshots in repo root
+/image-*.png

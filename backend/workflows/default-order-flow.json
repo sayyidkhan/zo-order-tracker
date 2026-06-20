@@ -8,32 +8,40 @@
       "type": "decision",
       "rules": [
         {
-          "id": "order_request",
+          "id": "paid_order_request",
           "if": {
-            "containsAny": ["want", "buy", "reserve", "take", "can i get"]
+            "matchesRegex": "\\b(?:want|buy|reserve|take|can i get|get|need|order)\\b.*\\b(?:paid|paynow|bank transfer|transferred|transfer done|receipt)\\b|\\b(?:paid|paynow|bank transfer|transferred|transfer done|receipt)\\b.*\\b(?:want|buy|reserve|take|can i get|get|need|order)\\b"
+          },
+          "then": "create_order"
+        },
+        {
+          "id": "paid_quantity_order",
+          "if": {
+            "containsAny": ["paid", "paynow", "bank transfer", "transferred", "transfer done", "receipt"],
+            "matchesRegex": "\\b\\d+\\s+[a-z][a-z\\s-]{1,40}"
           },
           "then": "create_order"
         },
         {
           "id": "payment_update",
           "if": {
-            "containsAny": ["paid", "paynow", "transferred", "transfer done", "sent receipt"]
+            "containsAny": ["paid", "paynow", "bank transfer", "transferred", "transfer done", "sent receipt"]
           },
           "then": "mark_paid"
         },
         {
-          "id": "partial_payment_update",
+          "id": "order_request_missing_payment",
           "if": {
-            "containsAny": ["deposit", "half paid", "partial", "balance"]
+            "containsAny": ["want", "buy", "reserve", "take", "can i get", "get", "need"]
           },
-          "then": "mark_partial"
+          "then": "ask_payment_evidence"
         },
         {
           "id": "explicit_order_request",
           "if": {
             "containsAny": ["order"]
           },
-          "then": "create_order"
+          "then": "ask_payment_evidence"
         },
         {
           "id": "priced_message",
@@ -54,16 +62,17 @@
       "action": "update_payment_status",
       "payment_status": "paid"
     },
-    "mark_partial": {
-      "type": "action",
-      "action": "update_payment_status",
-      "payment_status": "partial"
-    },
     "ask_order_confirmation": {
       "type": "action",
       "action": "ask_follow_up",
       "message": "I found an amount, but I need to confirm whether this is an order.",
       "required_fields": ["order_summary"]
+    },
+    "ask_payment_evidence": {
+      "type": "action",
+      "action": "ask_follow_up",
+      "message": "Ask for PayNow or bank transfer evidence before capturing this order.",
+      "required_fields": ["payment_evidence"]
     },
     "needs_review": {
       "type": "action",

@@ -75,7 +75,7 @@ function nextAgentState(status) {
 
 function buildAgentMessage(result) {
   if (result.status === "created") {
-    return `I found 1 order: ${result.order.order_summary}. Payment looks ${result.order.payment_status}. ${result.explanation}`;
+    return `I found 1 paid order capture: ${result.order.order_summary}. ${result.explanation}`;
   }
 
   if (result.status === "updated") {

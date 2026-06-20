@@ -5,8 +5,8 @@
 Build a fast hackathon MVP for home businesses:
 
 - Enter or import order details in a web app.
-- Classify orders and payment status with deterministic JSON workflows.
-- Show a simple paid/unpaid dashboard.
+- Classify paid order captures and payment evidence with deterministic JSON workflows.
+- Show a simple dated sales capture dashboard.
 - Keep the architecture ready for Telegram automation later.
 - Use AI only as optional build-time assistance, not as the default runtime engine.
 
@@ -22,6 +22,7 @@ Build a fast hackathon MVP for home businesses:
 | Data | SQLite + Drizzle ORM for MVP | Simple local persistence, no external database setup during hackathon. |
 | Future Data | Postgres | Move here only after the MVP needs multi-user persistence or production hosting. |
 | Validation | Zod | Validate order input and workflow JSON before runtime execution. |
+| MVP Auth | User signup + manually managed admin credentials | Regular users can self-sign up with a 6-digit PIN; business/admin access is not self-service. |
 | Workflow Engine | Deterministic JSON decision tree | Cheap, predictable, debuggable, and suitable for budget-conscious users. |
 | AI Assistance | Optional build-time workflow generator | Helps users create workflows faster, but users can also configure the JSON manually. |
 | Telegram | Future Telegram Bot API webhook | Telegram is not required for the MVP; automation is a later integration path. |
@@ -49,7 +50,7 @@ Deterministic parser + workflow engine
 SQLite database
         |
         v
-Paid / unpaid dashboard
+Paid sales capture dashboard
 ```
 
 ## Future Telegram Automation Path
@@ -163,7 +164,7 @@ Workflow source of truth:
 - Store each workflow as JSON.
 - Load the JSON at runtime.
 - Match order input against conditions.
-- Execute simple actions such as creating an order, updating payment status, asking a follow-up question, or marking the input as unknown.
+- Execute simple actions such as creating a paid capture, asking for payment evidence, or marking the input as unknown.
 
 Example workflow shape:
 
@@ -224,7 +225,7 @@ Avoid AI usage:
 
 - Do not call an LLM for every order event by default.
 - Do not make order creation depend on free-form AI reasoning.
-- Do not make payment status updates depend on opaque AI decisions.
+- Do not make payment evidence capture depend on opaque AI decisions.
 
 The product promise is a reliable workflow system, not a generic AI chatbot.
 
@@ -280,12 +281,10 @@ workflow_runs
 - created_at
 ```
 
-Payment status should stay simple for MVP:
+Payment evidence should stay simple for MVP:
 
-- `unpaid`
-- `partial`
-- `paid`
-- `unknown`
+- `paid` when PayNow or bank-transfer evidence exists
+- `unknown` when evidence is missing or ambiguous
 
 ## Extraction Contract
 
@@ -308,10 +307,11 @@ Minimum output:
           "notes": "string | null"
         }
       ],
-      "payment_status": "paid | unpaid | partial | unknown",
+      "payment_status": "paid | unknown",
       "total_amount": 0,
       "currency": "SGD",
-      "evidence": "short quote or field from source input"
+      "evidence": "PayNow or bank transfer evidence from source input",
+      "created_at": "ISO timestamp"
     }
   ]
 }
@@ -323,7 +323,7 @@ Minimum output:
 | --- | --- |
 | Haoming | Deterministic workflow logic, workflow JSON schema, optional AI setup flow. |
 | Sayyid | Zo Computer setup, backend APIs, database, Telegram webhook path. |
-| Bruce | Order entry/import UI, dashboard UI, paid/unpaid states, visual polish. |
+| Bruce | Order entry/import UI, paid capture dashboard UI, visual polish. |
 | Aslam | Pitch deck, submission video, demo story. |
 
 ## Build Order
@@ -334,14 +334,15 @@ Minimum output:
 4. Implement deterministic workflow execution.
 5. Persist extracted orders in SQLite.
 6. Connect dashboard to real extracted orders.
-7. Add manual payment status update.
-8. Add optional AI workflow builder only if the deterministic flow is stable.
-9. Prepare Telegram bot webhook only if MVP is stable.
+7. Add SQLite-backed product inventory upload.
+8. Add date-tracked sales capture analytics.
+9. Add optional AI workflow builder only if the deterministic flow is stable.
+10. Prepare Telegram bot webhook only if MVP is stable.
 
 ## Deliberate Non-Goals
 
 - No full CRM.
-- No inventory management.
+- No complex inventory management beyond product upload and sales summaries.
 - No invoices.
 - No multi-channel support.
 - No complex auth.
@@ -353,8 +354,8 @@ Minimum output:
 
 1. Enter or import a messy order.
 2. Click process.
-3. Show how the JSON workflow converts order input into customer, items, amount, and payment status.
-4. Update one order from unpaid to paid.
-5. Show the owner dashboard summary.
+3. Show how the JSON workflow converts paid order input into customer, items, amount, evidence, and capture date.
+4. Show missing payment evidence routing to follow-up instead of sales.
+5. Show the owner dashboard and sales capture analytics.
 
 This proves the core value without overbuilding infrastructure.

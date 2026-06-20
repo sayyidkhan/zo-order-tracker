@@ -6,9 +6,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workflowDir = path.resolve(__dirname, "..", "workflows");
 
 const paymentHints = {
-  paid: ["paid", "paynow", "transferred", "transfer done", "sent", "receipt"],
-  partial: ["deposit", "half paid", "partial", "balance"],
-  unpaid: ["unpaid", "pay later", "cod", "cash on delivery"]
+  paid: ["paid", "paynow", "bank transfer", "transferred", "transfer done", "sent", "receipt"]
 };
 
 export function loadWorkflow(workflowId = "default-order-flow") {
@@ -110,8 +108,7 @@ function buildActionResult({
 }) {
   const action = state.action;
   const inferredPaymentStatus = inferPaymentStatus(normalizedInput);
-  const paymentStatus =
-    state.payment_status ?? (action === "create_order" && inferredPaymentStatus === "unknown" ? "unpaid" : inferredPaymentStatus);
+  const paymentStatus = state.payment_status ?? inferredPaymentStatus;
   const explanation = explainMatch({ action, matchedRule, state, normalizedInput });
 
   const base = {

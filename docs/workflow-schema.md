@@ -82,7 +82,7 @@ An action state produces an outcome for the backend.
 {
   "type": "action",
   "action": "create_order",
-  "payment_status": "unpaid"
+  "payment_status": "paid"
 }
 ```
 
@@ -90,10 +90,10 @@ Supported actions for MVP:
 
 | Action | Result |
 | --- | --- |
-| `create_order` | Extract order fields and create an order. |
-| `update_payment_status` | Mark a detected or selected order as paid, partial, unpaid, or unknown. |
+| `create_order` | Extract order fields and create a paid sales capture. |
+| `update_payment_status` | Mark a detected payment-only update as paid. |
 | `needs_review` | Store the input for manual review. |
-| `ask_follow_up` | Return a prompt for missing order details. |
+| `ask_follow_up` | Return a prompt for missing order details or payment evidence. |
 
 ## Extraction Contract
 
@@ -110,15 +110,15 @@ The workflow runner should return a consistent response:
     "customer_name": null,
     "customer_handle": null,
     "source_channel": "manual",
-    "source_input": "hi i want 2 brownies, paid by paynow",
-    "order_summary": "2 brownies",
+    "source_input": "hi i want 12 egg tarts, paid by paynow",
+    "order_summary": "12 egg tarts",
     "payment_status": "paid",
     "total_amount": null,
     "currency": "SGD",
     "items": [
       {
-        "item_name": "brownies",
-        "quantity": 2,
+        "item_name": "egg tarts",
+        "quantity": 12,
         "unit_price": null,
         "notes": null
       }
@@ -140,23 +140,21 @@ Field requirements:
 | `order` | no | Present when action creates or updates an order. |
 | `explanation` | yes | Short deterministic explanation for the UI. |
 
-## Payment Status Rules
+## Payment Evidence Rules
 
-Payment status must stay one of:
+For the MVP, saved sales captures should be paid only:
 
-- `unpaid`
-- `partial`
 - `paid`
-- `unknown`
+- `unknown` for ambiguous workflow previews or review-only results
 
 Recommended keyword hints:
 
 | Status | Hints |
 | --- | --- |
-| `paid` | paid, paynow, transferred, transfer done, sent, receipt |
-| `partial` | deposit, half paid, partial, balance |
-| `unpaid` | unpaid, pay later, cod, cash on delivery |
+| `paid` | paid, paynow, bank transfer, transferred, transfer done, sent receipt, receipt |
 | `unknown` | no payment hint found |
+
+Missing PayNow or bank-transfer evidence should route to `ask_follow_up` with `payment_evidence`, not create an unpaid order.
 
 ## MVP Runner Algorithm
 
@@ -172,5 +170,5 @@ Recommended keyword hints:
 
 - Do not call an LLM inside the normal workflow runner.
 - Do not silently invent customer or payment details.
-- Do not create invoices, inventory records, or CRM-style profiles for MVP.
+- Do not let the workflow runner create invoices, product inventory records, or CRM-style profiles for MVP.
 - If the input is ambiguous, return `needs_review` or `ask_follow_up`.
