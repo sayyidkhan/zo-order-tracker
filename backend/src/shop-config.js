@@ -27,7 +27,8 @@ export const defaultShopConfig = {
   paynow_qr_image: "",
   bank_name: "DBS Bank",
   bank_account_name: "Zorder Dessert Stall",
-  bank_account_number: "001-234567-8"
+  bank_account_number: "001-234567-8",
+  footer_note: ""
 };
 
 const shopConfigSchema = z.object({
@@ -40,7 +41,8 @@ const shopConfigSchema = z.object({
   paynow_qr_image: z.string().max(1_500_000).default(""),
   bank_name: z.string().trim().max(80).default(""),
   bank_account_name: z.string().trim().max(120).default(""),
-  bank_account_number: z.string().trim().max(80).default("")
+  bank_account_number: z.string().trim().max(80).default(""),
+  footer_note: z.string().trim().max(200).default("")
 });
 
 createShopConfigSchema();
@@ -49,7 +51,8 @@ export function loadShopConfig() {
   const row = db
     .prepare(
       `SELECT business_name, mark_letter, tagline, description, payment_instructions,
-              paynow_number, paynow_qr_image, bank_name, bank_account_name, bank_account_number
+              paynow_number, paynow_qr_image, bank_name, bank_account_name, bank_account_number,
+              footer_note
          FROM shop_config
         WHERE id = 'default'`
     )
@@ -68,9 +71,10 @@ export function saveShopConfig(config) {
   db.prepare(
     `INSERT INTO shop_config (
        id, business_name, mark_letter, tagline, description, payment_instructions,
-       paynow_number, paynow_qr_image, bank_name, bank_account_name, bank_account_number, updated_at
+       paynow_number, paynow_qr_image, bank_name, bank_account_name, bank_account_number,
+       footer_note, updated_at
      )
-     VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+     VALUES ('default', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(id) DO UPDATE SET
        business_name = excluded.business_name,
        mark_letter = excluded.mark_letter,
@@ -82,6 +86,7 @@ export function saveShopConfig(config) {
        bank_name = excluded.bank_name,
        bank_account_name = excluded.bank_account_name,
        bank_account_number = excluded.bank_account_number,
+       footer_note = excluded.footer_note,
        updated_at = excluded.updated_at`
   ).run(
     parsed.business_name,
@@ -94,6 +99,7 @@ export function saveShopConfig(config) {
     parsed.bank_name,
     parsed.bank_account_name,
     parsed.bank_account_number,
+    parsed.footer_note,
     new Date().toISOString()
   );
 
@@ -141,6 +147,7 @@ function createShopConfigSchema() {
   ensureShopConfigColumn("bank_name", "TEXT NOT NULL DEFAULT ''");
   ensureShopConfigColumn("bank_account_name", "TEXT NOT NULL DEFAULT ''");
   ensureShopConfigColumn("bank_account_number", "TEXT NOT NULL DEFAULT ''");
+  ensureShopConfigColumn("footer_note", "TEXT NOT NULL DEFAULT ''");
 }
 
 function ensureShopConfigColumn(columnName, columnType) {

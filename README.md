@@ -22,7 +22,7 @@ Backend:
 
 ```bash
 cd backend
-cp .env.example .env
+npm run setup:env
 npm install --no-package-lock
 npm run seed:users
 npm run seed:demo
@@ -74,6 +74,20 @@ backend/data/users.json
 Business/admin access is not self-service. Add that manually through backend config or a future database migration.
 
 This is only a lightweight demo guard, not production auth.
+
+To create or update `backend/.env` without editing the file manually:
+
+```bash
+cd backend
+npm run setup:env
+```
+
+You can also pass values directly:
+
+```bash
+cd backend
+npm run setup:env -- --user-username=user --user-pin=123456 --admin-username=admin --admin-pin=654321 --gpt-api-key=your_api_key_here
+```
 
 To seed custom demo users:
 

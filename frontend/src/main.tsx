@@ -171,6 +171,7 @@ type ShopBranding = {
   bank_name: string;
   bank_account_name: string;
   bank_account_number: string;
+  footer_note: string;
 };
 type CustomerMenuSnapshot = {
   products: InventoryProduct[];
@@ -249,6 +250,24 @@ const workflowStarterPrompts = [
   "Drink stall selling bandung and lemonade. Treat PayNow, bank transfer, receipt, or transfer done as payment evidence.",
   "Food seller with messy customer messages. Extract item quantity and customer name, then create an order only when payment proof is clear."
 ];
+const workflowBuildProgressSteps = [
+  {
+    title: "Reading business context",
+    detail: "Products, payment methods, and paid-only capture rules."
+  },
+  {
+    title: "Drafting decision states",
+    detail: "Payment evidence, order content, and follow-up branches."
+  },
+  {
+    title: "Checking deterministic paths",
+    detail: "Validating state links, actions, and missing-payment routing."
+  },
+  {
+    title: "Preparing live draft",
+    detail: "Summarizing rules, test inputs, and the workflow preview."
+  }
+];
 
 const routeHeadings: Record<AuthRole, string> = {
   user: "What would you like to order today?",
@@ -266,7 +285,8 @@ const defaultShopBranding: ShopBranding = {
   paynow_qr_image: "",
   bank_name: "DBS Bank",
   bank_account_name: "Zorder Dessert Stall",
-  bank_account_number: "001-234567-8"
+  bank_account_number: "001-234567-8",
+  footer_note: ""
 };
 
 const techStackHighlights = [
@@ -405,6 +425,7 @@ function App() {
 
 function Workspace() {
   const [activeRoute, setActiveRoute] = useStateValue<AppRoute>(getInitialRoute());
+  const [loginMode, setLoginMode] = useStateValue<AuthMode>(getAuthModeFromUrl());
   const [auth, setAuth] = useState<AuthState>(loadAuthState);
   const [businessDescription, setBusinessDescription] = useStateValue(
     "Small Singapore dessert stall selling egg tarts and sweet drinks. Drinks are usually bandung or lemonade. Customers pay only by PayNow or bank transfer."
@@ -477,10 +498,13 @@ function Workspace() {
     formatUsernameLabel(auth.user?.username ?? "there");
 
   useEffect(() => {
-    const handlePopState = () => setActiveRoute(getInitialRoute());
+    const handlePopState = () => {
+      setActiveRoute(getInitialRoute());
+      setLoginMode(getAuthModeFromUrl());
+    };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [setActiveRoute]);
+  }, [setActiveRoute, setLoginMode]);
 
   useLayoutEffect(() => {
     const path = window.location.pathname;
@@ -512,6 +536,12 @@ function Workspace() {
     setActiveRoute(route);
   }
 
+  function navigateToLogin(mode: AuthMode = "sign-in") {
+    setLoginMode(mode);
+    window.history.pushState({}, "", mode === "sign-up" ? "/login?mode=sign-up" : "/login");
+    setActiveRoute("login");
+  }
+
   function authenticate(role: AuthRole, credential: AuthCredential) {
     localStorage.setItem(authStorageKey(role), JSON.stringify(credential));
     setAuth((current) => ({ ...current, [role]: credential }));
@@ -527,7 +557,8 @@ function Workspace() {
   if (activeRoute === "intro") {
     return (
       <main className="app-shell is-signed-out">
-        <section className="workspace is-signed-out">
+        <section className="workspace is-signed-out is-docs-page">
+          <PublicPageTopbar onNavigate={navigateToRoute} activeRoute="intro" showBack />
           <IntroView onNavigate={navigateToRoute} />
         </section>
       </main>
@@ -538,6 +569,7 @@ function Workspace() {
     return (
       <main className="app-shell is-authenticated is-docs-route">
         <section className="workspace is-authenticated tech-stack-workspace">
+          <PublicPageTopbar onNavigate={navigateToRoute} activeRoute="tech-stack" showBack />
           <TechStackView onNavigate={navigateToRoute} />
         </section>
       </main>
@@ -548,7 +580,12 @@ function Workspace() {
     return (
       <main className="app-shell is-signed-out">
         <section className="workspace is-signed-out is-login-page">
-          <LoginPage onAuthenticated={authenticate} onBack={() => navigateToRoute("user")} />
+          <LoginPage
+            shopBranding={shopBranding}
+            initialMode={loginMode}
+            onAuthenticated={authenticate}
+            onBack={() => navigateToRoute("user")}
+          />
         </section>
       </main>
     );
@@ -558,8 +595,12 @@ function Workspace() {
     return (
       <main className="app-shell is-signed-out">
         <section className="workspace is-signed-out is-user-landing">
-          <PublicSiteNav onNavigate={navigateToRoute} />
-          <UserShopLanding shopBranding={shopBranding} onEnter={() => navigateToRoute("login")} />
+          <PublicPageTopbar onNavigate={navigateToRoute} />
+          <UserShopLanding
+            shopBranding={shopBranding}
+            onSignIn={() => navigateToLogin("sign-in")}
+            onSignUp={() => navigateToLogin("sign-up")}
+          />
         </section>
       </main>
     );
@@ -629,14 +670,8 @@ function Workspace() {
 function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
   return (
     <div className="intro-page">
-      <PublicPageBack onNavigate={onNavigate} />
       <header className="intro-hero">
-        <div className="auth-brand">
-          <span className="brand-glyph" aria-hidden="true">
-            Z
-          </span>
-          <span className="brand-name">zorder</span>
-        </div>
+        <BrandMark businessName="zorder" markLetter="Z" onHomeClick={() => onNavigate("user")} />
         <p className="section-label">order tracking for home businesses</p>
         <h1 className="intro-headline">Turn messy customer notes into trackable orders.</h1>
         <p className="intro-lead">
@@ -722,15 +757,9 @@ function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
 function TechStackView({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
   return (
     <div className="tech-stack-page">
-      <PublicPageBack onNavigate={onNavigate} />
       <header className="tech-hero">
         <div className="tech-hero-copy">
-          <div className="auth-brand">
-            <span className="brand-glyph" aria-hidden="true">
-              Z
-            </span>
-            <span className="brand-name">zorder</span>
-          </div>
+          <BrandMark businessName="zorder" markLetter="Z" onHomeClick={() => onNavigate("user")} />
           <p className="section-label">technical architecture</p>
           <h1 className="intro-headline">zorder tech stack</h1>
           <p className="intro-lead">
@@ -825,27 +854,80 @@ function TechStackView({ onNavigate }: { onNavigate: (route: AppRoute) => void }
   );
 }
 
-function BrandMark({ businessName, markLetter }: { businessName: string; markLetter: string }) {
-  return (
-    <div className="auth-brand">
+function BrandMark({
+  businessName,
+  markLetter,
+  onHomeClick
+}: {
+  businessName: string;
+  markLetter: string;
+  onHomeClick?: () => void;
+}) {
+  const content = (
+    <>
       <span className="brand-glyph" aria-hidden="true">
         {markLetter.charAt(0).toUpperCase()}
       </span>
       <span className="brand-name">{businessName}</span>
-    </div>
+    </>
   );
+
+  if (onHomeClick) {
+    return (
+      <button className="auth-brand brand-mark-button" type="button" onClick={onHomeClick}>
+        {content}
+      </button>
+    );
+  }
+
+  return <div className="auth-brand">{content}</div>;
 }
 
-function PublicSiteNav({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
+function PublicSiteNav({
+  onNavigate,
+  activeRoute
+}: {
+  onNavigate: (route: AppRoute) => void;
+  activeRoute?: AppRoute;
+}) {
   return (
     <nav className="public-site-nav" aria-label="Site">
-      <button className="public-site-nav-link" type="button" onClick={() => onNavigate("intro")}>
+      <button
+        className={`public-site-nav-link${activeRoute === "intro" ? " is-active" : ""}`}
+        type="button"
+        aria-current={activeRoute === "intro" ? "page" : undefined}
+        onClick={() => onNavigate("intro")}
+      >
         Intro
       </button>
-      <button className="public-site-nav-link" type="button" onClick={() => onNavigate("tech-stack")}>
+      <button
+        className={`public-site-nav-link${activeRoute === "tech-stack" ? " is-active" : ""}`}
+        type="button"
+        aria-current={activeRoute === "tech-stack" ? "page" : undefined}
+        onClick={() => onNavigate("tech-stack")}
+      >
         Tech stack
       </button>
     </nav>
+  );
+}
+
+function PublicPageTopbar({
+  onNavigate,
+  activeRoute,
+  showBack = false
+}: {
+  onNavigate: (route: AppRoute) => void;
+  activeRoute?: AppRoute;
+  showBack?: boolean;
+}) {
+  return (
+    <div className="public-page-topbar">
+      <div className="public-page-topbar-start">
+        {showBack ? <PublicPageBack onNavigate={onNavigate} /> : null}
+      </div>
+      <PublicSiteNav onNavigate={onNavigate} activeRoute={activeRoute} />
+    </div>
   );
 }
 
@@ -860,52 +942,152 @@ function PublicPageBack({ onNavigate }: { onNavigate: (route: AppRoute) => void 
 
 function UserShopLanding({
   shopBranding,
-  onEnter
+  onSignIn,
+  onSignUp
 }: {
   shopBranding: ShopBranding;
-  onEnter: () => void;
+  onSignIn: () => void;
+  onSignUp: () => void;
 }) {
+  const menuPreviewQuery = useQuery({
+    queryKey: ["menu-preview"],
+    queryFn: fetchMenuPreview
+  });
+  const previewProducts = menuPreviewQuery.data ?? [];
+  const paymentMethods = buildAcceptedPaymentMethods(shopBranding);
+  const footerNote = shopBranding.footer_note.trim();
+
   return (
     <div className="user-shop-landing">
       <div className="user-shop-landing-inner">
         <BrandMark businessName={shopBranding.business_name} markLetter={shopBranding.mark_letter} />
         <h1 className="user-shop-headline">{shopBranding.tagline}</h1>
         <p className="user-shop-lead">{shopBranding.description}</p>
-        <button className="primary-button user-shop-enter" type="button" onClick={onEnter}>
-          Enter
+
+        {paymentMethods.length ? (
+          <div className="payment-method-chips" aria-label="Accepted payment methods">
+            {paymentMethods.map((method) => (
+              <span className="payment-method-chip" key={method}>
+                {method}
+              </span>
+            ))}
+          </div>
+        ) : null}
+
+        <button className="primary-button user-shop-enter" type="button" onClick={onSignIn}>
+          Order now
           <ArrowRight size={18} />
         </button>
+
+        <p className="user-shop-signup-prompt">
+          New here?{" "}
+          <button className="text-link" type="button" onClick={onSignUp}>
+            Create account
+          </button>
+        </p>
+
+        <section className="user-shop-how-it-works" aria-labelledby="user-shop-steps-heading">
+          <p className="section-label">how it works</p>
+          <h2 id="user-shop-steps-heading" className="visually-hidden">
+            How ordering works
+          </h2>
+          <ol className="user-shop-steps">
+            <li className="user-shop-step">
+              <span className="user-shop-step-icon" aria-hidden="true">
+                <KeyRound size={18} />
+              </span>
+              <div>
+                <strong>Sign in</strong>
+                <span>Create an account or enter with your PIN.</span>
+              </div>
+            </li>
+            <li className="user-shop-step">
+              <span className="user-shop-step-icon" aria-hidden="true">
+                <ShoppingBag size={18} />
+              </span>
+              <div>
+                <strong>Browse menu</strong>
+                <span>Pick items from the shop menu.</span>
+              </div>
+            </li>
+            <li className="user-shop-step">
+              <span className="user-shop-step-icon" aria-hidden="true">
+                <CircleDollarSign size={18} />
+              </span>
+              <div>
+                <strong>Pay &amp; order</strong>
+                <span>Pay by PayNow or bank transfer, then place your order.</span>
+              </div>
+            </li>
+          </ol>
+        </section>
+
+        {previewProducts.length ? (
+          <section className="user-shop-menu-teaser" aria-labelledby="user-shop-menu-heading">
+            <p className="section-label">on the menu</p>
+            <h2 id="user-shop-menu-heading">Popular items</h2>
+            <ul className="user-shop-menu-grid">
+              {previewProducts.map((product) => (
+                <li className="user-shop-menu-item" key={product.id ?? product.name}>
+                  <span className="user-shop-menu-name">{product.name}</span>
+                  <span className="user-shop-menu-meta">
+                    {product.category}
+                    {product.unit_price != null ? ` · ${formatAmount(product.unit_price, "SGD")}` : ""}
+                  </span>
+                </li>
+              ))}
+            </ul>
+            <p className="user-shop-menu-note">Sign in to browse the full menu and place an order.</p>
+          </section>
+        ) : null}
+
+        {footerNote ? (
+          <footer className="user-shop-footer">
+            <p>{footerNote}</p>
+          </footer>
+        ) : null}
       </div>
     </div>
   );
 }
 
 function LoginPage({
+  shopBranding,
+  initialMode,
   onAuthenticated,
   onBack
 }: {
+  shopBranding: ShopBranding;
+  initialMode: AuthMode;
   onAuthenticated: (role: AuthRole, credential: AuthCredential) => void;
   onBack: () => void;
 }) {
   return (
     <div className="login-page">
+      <BrandMark
+        businessName={shopBranding.business_name}
+        markLetter={shopBranding.mark_letter}
+        onHomeClick={onBack}
+      />
       <button className="auth-back-button" type="button" onClick={onBack}>
         <ArrowLeft size={16} />
         Back
       </button>
-      <LoginView onAuthenticated={onAuthenticated} onBack={onBack} />
+      <LoginView initialMode={initialMode} onAuthenticated={onAuthenticated} onBack={onBack} />
     </div>
   );
 }
 
 function LoginView({
+  initialMode,
   onAuthenticated,
   onBack
 }: {
+  initialMode: AuthMode;
   onAuthenticated: (role: AuthRole, credential: AuthCredential) => void;
   onBack: () => void;
 }) {
-  const [mode, setMode] = useStateValue<AuthMode>("sign-in");
+  const [mode, setMode] = useStateValue<AuthMode>(initialMode);
   const [username, setUsername] = useStateValue("");
   const [pin, setPin] = useStateValue("");
   const [confirmPin, setConfirmPin] = useStateValue("");
@@ -914,6 +1096,13 @@ function LoginView({
   const isSignUp = mode === "sign-up";
   const isPinReady = /^\d{6}$/.test(pin);
   const isConfirmPinReady = !isSignUp || /^\d{6}$/.test(confirmPin);
+
+  useEffect(() => {
+    setMode(initialMode);
+    setError(null);
+    setPin("");
+    setConfirmPin("");
+  }, [initialMode, setMode, setError, setPin, setConfirmPin]);
 
   async function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -2292,6 +2481,7 @@ function OrderRulesPanel({
   const [activeBuilderTab, setActiveBuilderTab] = useStateValue<WorkflowBuilderTab>("rules");
   const [publishNotice, setPublishNotice] = useStateValue<string | null>(null);
   const [chatMessages, setChatMessages] = useState<WorkflowChatMessage[]>(loadWorkflowChatHistory);
+  const [buildElapsedSeconds, setBuildElapsedSeconds] = useState(0);
   const chatLogRef = useRef<HTMLDivElement>(null);
 
   const publishMutation = useMutation({
@@ -2309,6 +2499,21 @@ function OrderRulesPanel({
       behavior: "smooth"
     });
   }, [chatMessages, generateMutation.isPending]);
+
+  useEffect(() => {
+    if (!generateMutation.isPending) {
+      setBuildElapsedSeconds(0);
+      return undefined;
+    }
+
+    const startedAt = Date.now();
+    setBuildElapsedSeconds(0);
+    const timer = window.setInterval(() => {
+      setBuildElapsedSeconds(Math.floor((Date.now() - startedAt) / 1000));
+    }, 500);
+
+    return () => window.clearInterval(timer);
+  }, [generateMutation.isPending]);
 
   async function submitBuilderPrompt() {
     const prompt = builderPrompt.trim();
@@ -2467,7 +2672,10 @@ function OrderRulesPanel({
                     <strong>Builder</strong>
                     <span>Working</span>
                   </div>
-                  <p>Updating the JSON tree and checking the deterministic branches.</p>
+                  <WorkflowBuildProgress
+                    elapsedSeconds={buildElapsedSeconds}
+                    isRefiningWorkflow={Boolean(generatedWorkflow)}
+                  />
                 </div>
               </article>
             ) : null}
@@ -2546,6 +2754,67 @@ function OrderRulesPanel({
         </div>
       )}
     </section>
+  );
+}
+
+function WorkflowBuildProgress({
+  elapsedSeconds,
+  isRefiningWorkflow
+}: {
+  elapsedSeconds: number;
+  isRefiningWorkflow: boolean;
+}) {
+  const activeStepIndex = Math.min(Math.floor(elapsedSeconds / 3), workflowBuildProgressSteps.length - 1);
+  const progressValue = Math.min(92, 14 + activeStepIndex * 22 + (elapsedSeconds % 3) * 5);
+  const activeStep = workflowBuildProgressSteps[activeStepIndex];
+  const modeLabel = isRefiningWorkflow ? "Updating workflow" : "Building workflow";
+
+  return (
+    <div
+      className="workflow-build-progress"
+      role="status"
+      aria-label={`${modeLabel}: ${activeStep.title}`}
+      aria-live="polite"
+    >
+      <div className="workflow-build-progress-header">
+        <span className="workflow-build-spinner" aria-hidden="true">
+          <Loader2 className="spin" size={18} />
+        </span>
+        <div>
+          <strong>{modeLabel}</strong>
+          <p>{activeStep.detail}</p>
+        </div>
+        <span className="workflow-build-progress-time">{elapsedSeconds < 1 ? "Starting" : `${elapsedSeconds}s`}</span>
+      </div>
+      <div
+        className="workflow-build-progress-track"
+        aria-label={`Estimated progress ${progressValue}%`}
+        aria-valuemax={100}
+        aria-valuemin={0}
+        aria-valuenow={progressValue}
+        role="progressbar"
+      >
+        <span style={{ width: `${progressValue}%` }} />
+      </div>
+      <ol className="workflow-build-steps">
+        {workflowBuildProgressSteps.map((step, index) => {
+          const isDone = index < activeStepIndex;
+          const isActive = index === activeStepIndex;
+
+          return (
+            <li className={isDone ? "is-done" : isActive ? "is-active" : ""} key={step.title}>
+              <span className="workflow-build-step-marker" aria-hidden="true">
+                {isDone ? <CheckCircle2 size={14} /> : index + 1}
+              </span>
+              <span>
+                <strong>{step.title}</strong>
+                <small>{step.detail}</small>
+              </span>
+            </li>
+          );
+        })}
+      </ol>
+    </div>
   );
 }
 
@@ -2664,7 +2933,7 @@ function ShopBrandingPanel({
 
       <p className="panel-copy">
         These settings appear on the customer storefront at <code>/user</code>. Customers sign in after choosing
-        Enter from the landing page.
+        Order now from the home page.
       </p>
 
       <div className="branding-preview">
@@ -2729,6 +2998,20 @@ function ShopBrandingPanel({
             className="compact-textarea branding-textarea"
             value={draft.description}
             onChange={(event) => setDraft((current) => ({ ...current, description: event.target.value }))}
+          />
+        </div>
+
+        <div className="field-group">
+          <label className="field-label" htmlFor="shop-footer-note">
+            Footer note
+          </label>
+          <input
+            id="shop-footer-note"
+            className="input-field branding-input"
+            type="text"
+            value={draft.footer_note}
+            onChange={(event) => setDraft((current) => ({ ...current, footer_note: event.target.value }))}
+            placeholder="Example: Open Tue–Sun, 10am–6pm · WhatsApp 9123 4567"
           />
         </div>
 
@@ -2903,7 +3186,8 @@ function ShopBrandingPanel({
               paynow_qr_image: draft.paynow_qr_image,
               bank_name: draft.bank_name.trim(),
               bank_account_name: draft.bank_account_name.trim(),
-              bank_account_number: draft.bank_account_number.trim()
+              bank_account_number: draft.bank_account_number.trim(),
+              footer_note: draft.footer_note.trim()
             });
           }}
         >
@@ -4452,6 +4736,10 @@ function useStateValue<T>(initialValue: T): [T, React.Dispatch<React.SetStateAct
   return useState(initialValue);
 }
 
+function getAuthModeFromUrl(): AuthMode {
+  return new URLSearchParams(window.location.search).get("mode") === "sign-up" ? "sign-up" : "sign-in";
+}
+
 function getInitialRoute(): AppRoute {
   const path = window.location.pathname;
   if (path.startsWith("/user/login") || path.startsWith("/login")) {
@@ -4645,6 +4933,20 @@ async function deleteInventoryProduct(adminCredential: AuthCredential, productId
 
   if (!response.ok) {
     throw new Error(await readApiError(response));
+  }
+}
+
+async function fetchMenuPreview(): Promise<InventoryProduct[]> {
+  try {
+    const response = await fetch(`${apiBase}/menu/preview`);
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { products?: InventoryProduct[] };
+    return payload.products ?? [];
+  } catch {
+    return [];
   }
 }
 

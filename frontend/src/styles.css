@@ -65,6 +65,8 @@ input {
 
 button {
   cursor: pointer;
+  appearance: none;
+  -webkit-appearance: none;
 }
 
 button:disabled {
@@ -365,6 +367,7 @@ td span {
   border-radius: var(--radius-sm);
   background: oklch(0.97 0.012 275 / 0.82);
   padding: 6px;
+  margin-bottom: 14px;
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 6px;
@@ -1265,6 +1268,126 @@ td span {
   overflow-wrap: anywhere;
 }
 
+.workflow-build-progress {
+  min-width: min(72vw, 460px);
+}
+
+.workflow-build-progress-header {
+  display: grid;
+  grid-template-columns: 34px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.workflow-build-spinner {
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  display: grid;
+  place-items: center;
+  color: white;
+  background: linear-gradient(135deg, var(--primary), var(--accent));
+  box-shadow: 0 10px 18px oklch(0.32 0.08 275 / 0.14);
+}
+
+.workflow-build-progress-header strong {
+  display: block;
+  font-size: 0.96rem;
+  line-height: 1.2;
+}
+
+.workflow-build-progress-header p {
+  margin-top: 2px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.35;
+}
+
+.workflow-build-progress-time {
+  justify-self: end;
+  color: var(--muted);
+  font-size: 0.78rem;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.workflow-build-progress-track {
+  height: 8px;
+  margin-top: 12px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: oklch(0.92 0.025 275);
+}
+
+.workflow-build-progress-track span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--primary), var(--accent));
+  transition: width 320ms ease;
+}
+
+.workflow-build-steps {
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 8px;
+  list-style: none;
+}
+
+.workflow-build-steps li {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 9px;
+  align-items: start;
+  color: var(--muted);
+}
+
+.workflow-build-step-marker {
+  width: 24px;
+  height: 24px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  color: var(--muted);
+  background: oklch(0.98 0.01 275);
+  font-size: 0.72rem;
+  font-weight: 850;
+}
+
+.workflow-build-steps li.is-active .workflow-build-step-marker {
+  border-color: var(--primary);
+  color: white;
+  background: var(--primary);
+}
+
+.workflow-build-steps li.is-done .workflow-build-step-marker {
+  border-color: oklch(0.7 0.13 155);
+  color: white;
+  background: oklch(0.62 0.15 155);
+}
+
+.workflow-build-steps strong {
+  display: block;
+  color: var(--ink);
+  font-size: 0.84rem;
+  line-height: 1.2;
+}
+
+.workflow-build-steps small {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.76rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.workflow-build-steps li.is-active strong,
+.workflow-build-steps li.is-active small {
+  color: var(--primary);
+}
+
 .workflow-composer {
   margin-top: 14px;
 }
@@ -1676,8 +1799,9 @@ textarea:focus {
   flex: 1;
   min-height: 0;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: center;
+  padding-block: clamp(12px, 4vw, 32px);
 }
 
 .user-shop-landing-inner {
@@ -1685,10 +1809,139 @@ textarea:focus {
   gap: 16px;
   justify-items: center;
   text-align: center;
+  width: 100%;
 }
 
 .user-shop-landing .auth-brand {
   justify-content: center;
+}
+
+.payment-method-chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+}
+
+.payment-method-chip {
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 6px 12px;
+  background: oklch(1 0 0 / 0.72);
+  color: var(--ink);
+  font-size: 0.82rem;
+  font-weight: 700;
+}
+
+.user-shop-signup-prompt {
+  margin: -4px 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
+.user-shop-how-it-works,
+.user-shop-menu-teaser {
+  width: 100%;
+  margin-top: 8px;
+  padding: clamp(18px, 3vw, 24px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: oklch(1 0 0 / 0.72);
+  box-shadow: var(--shadow-soft);
+  text-align: left;
+}
+
+.user-shop-how-it-works h2,
+.user-shop-menu-teaser h2 {
+  margin: 0 0 14px;
+  font-size: 1.1rem;
+}
+
+.user-shop-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 12px;
+}
+
+.user-shop-step {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 12px;
+  align-items: start;
+}
+
+.user-shop-step-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 999px;
+  background: oklch(0.96 0.03 275);
+  color: var(--primary);
+}
+
+.user-shop-step strong {
+  display: block;
+  margin-bottom: 2px;
+  font-size: 0.95rem;
+}
+
+.user-shop-step span {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.5;
+}
+
+.user-shop-menu-grid {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.user-shop-menu-item {
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 12px;
+  background: oklch(0.99 0.004 275);
+}
+
+.user-shop-menu-name {
+  display: block;
+  font-weight: 700;
+  font-size: 0.92rem;
+}
+
+.user-shop-menu-meta {
+  display: block;
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+.user-shop-menu-note {
+  margin: 14px 0 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  text-align: center;
+}
+
+.user-shop-footer {
+  width: 100%;
+  margin-top: 4px;
+  padding-top: 8px;
+}
+
+.user-shop-footer p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.84rem;
+  line-height: 1.55;
 }
 
 .user-shop-headline {
@@ -1729,6 +1982,14 @@ textarea:focus {
   display: grid;
   gap: 12px;
   justify-items: stretch;
+}
+
+.login-page .brand-mark-button {
+  justify-self: center;
+}
+
+.workspace.is-docs-page {
+  justify-content: flex-start;
 }
 
 .workspace.is-login-page {
@@ -1775,6 +2036,24 @@ textarea:focus {
   margin-bottom: 12px;
 }
 
+.public-page-topbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: 100%;
+  margin-bottom: 4px;
+}
+
+.public-page-topbar .public-site-nav {
+  width: auto;
+  margin-bottom: 0;
+}
+
+.public-page-topbar-start {
+  min-width: 72px;
+}
+
 .public-site-nav-link {
   border: 0;
   border-radius: 999px;
@@ -1786,6 +2065,11 @@ textarea:focus {
   transition: color 0.15s ease, background 0.15s ease;
 }
 
+.public-site-nav-link.is-active {
+  color: var(--primary);
+  background: oklch(0.97 0.02 275);
+}
+
 .public-site-nav-link:hover,
 .public-site-nav-link:focus-visible {
   color: var(--primary);
@@ -1795,6 +2079,24 @@ textarea:focus {
 
 .public-page-back {
   justify-self: start;
+}
+
+.brand-mark-button {
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  cursor: pointer;
+  transition: opacity 0.15s ease, transform 0.15s ease;
+}
+
+.brand-mark-button:hover,
+.brand-mark-button:focus-visible {
+  opacity: 0.82;
+  outline: none;
+  transform: translateY(-1px);
 }
 
 .panel-copy {
@@ -2995,6 +3297,19 @@ tbody tr:hover {
     min-height: 76px;
   }
 
+  .workflow-build-progress {
+    min-width: 0;
+  }
+
+  .workflow-build-progress-header {
+    grid-template-columns: 34px minmax(0, 1fr);
+  }
+
+  .workflow-build-progress-time {
+    grid-column: 2;
+    justify-self: start;
+  }
+
   table {
     min-width: 0;
   }
@@ -3262,6 +3577,10 @@ td:first-child {
 
   .workspace.is-signed-out.is-user-landing {
     justify-content: flex-start;
+  }
+
+  .user-shop-menu-grid {
+    grid-template-columns: 1fr;
   }
 
   .auth-landing {

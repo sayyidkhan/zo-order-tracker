@@ -7,7 +7,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workflowDir = path.resolve(__dirname, "..", "workflows");
 const defaultOpenAiEndpoint = "https://api.openai.com/v1/responses";
 
-const workflowGenerationSchema = {
+export const workflowGenerationSchema = {
   type: "object",
   additionalProperties: false,
   required: ["workflow", "test_inputs", "rule_explanations"],
@@ -22,15 +22,16 @@ const workflowGenerationSchema = {
         version: { type: "integer" },
         start: { type: "string" },
         states: {
-          type: "object",
-          additionalProperties: {
+          type: "array",
+          items: {
             anyOf: [
               {
                 type: "object",
                 additionalProperties: false,
-                required: ["type", "rules", "else"],
+                required: ["id", "type", "rules", "else"],
                 properties: {
-                  type: { const: "decision" },
+                  id: { type: "string" },
+                  type: { type: "string", enum: ["decision"] },
                   rules: {
                     type: "array",
                     items: {
@@ -42,17 +43,18 @@ const workflowGenerationSchema = {
                         if: {
                           type: "object",
                           additionalProperties: false,
+                          required: ["containsAny", "containsAll", "matchesRegex", "amountDetected"],
                           properties: {
                             containsAny: {
-                              type: "array",
+                              type: ["array", "null"],
                               items: { type: "string" }
                             },
                             containsAll: {
-                              type: "array",
+                              type: ["array", "null"],
                               items: { type: "string" }
                             },
-                            matchesRegex: { type: "string" },
-                            amountDetected: { type: "boolean" }
+                            matchesRegex: { type: ["string", "null"] },
+                            amountDetected: { type: ["boolean", "null"] }
                           }
                         },
                         then: { type: "string" }
@@ -65,19 +67,23 @@ const workflowGenerationSchema = {
               {
                 type: "object",
                 additionalProperties: false,
-                required: ["type", "action"],
+                required: ["id", "type", "action", "payment_status", "message", "required_fields"],
                 properties: {
-                  type: { const: "action" },
+                  id: { type: "string" },
+                  type: { type: "string", enum: ["action"] },
                   action: {
+                    type: "string",
                     enum: ["create_order", "update_payment_status", "needs_review", "ask_follow_up"]
                   },
                   payment_status: {
-                    enum: ["unpaid", "partial", "paid", "unknown"]
+                    type: ["string", "null"],
+                    enum: ["unpaid", "partial", "paid", "unknown", null]
                   },
-                  message: { type: "string" },
+                  message: { type: ["string", "null"] },
                   required_fields: {
-                    type: "array",
+                    type: ["array", "null"],
                     items: {
+                      type: "string",
                       enum: [
                         "customer_name",
                         "customer_handle",
@@ -200,7 +206,7 @@ export async function generateWorkflow({
     throw error;
   }
 
-  const generated = parseStructuredOutput(payload);
+  const generated = normalizeGeneratedWorkflow(parseStructuredOutput(payload));
   generated.workflow.id = sanitizeWorkflowId(generated.workflow.id || workflowId);
   generated.workflow.name = generated.workflow.name || workflowName;
   generated.workflow.version = generated.workflow.version || 1;
@@ -386,6 +392,7 @@ function workflowBuilderInstructions() {
   return [
     "You generate zorder workflow JSON for home business order tracking.",
     "The workflow must be a deterministic multi-node decision tree, not a single flat rules list.",
+    "Return workflow.states as an array of state objects. Every state object must include an id, and all then, else, and start references must use those ids.",
     "If existing_workflow and change_request are provided, revise only the relevant branches and preserve unrelated state ids where possible.",
     "Use at least these decision states: detect_payment_evidence, detect_order_content, detect_order_without_payment.",
     "The start state must be detect_payment_evidence.",
@@ -393,12 +400,14 @@ function workflowBuilderInstructions() {
     "A paid branch may create_order only after order intent or quantity is detected.",
     "A missing-payment branch must ask_follow_up for payment_evidence.",
     "Use only explicit keyword, regex, and amount rules.",
+    "For rule conditions, set unused condition operators to null.",
     "Do not create CRM, invoice, inventory, auth, payment gateway, or Telegram-only behavior.",
     "Only create an order when the message includes PayNow, bank transfer, transfer done, paid, or receipt evidence.",
     "If an order request is missing payment evidence, ask a follow-up for payment_evidence instead of creating an unpaid order.",
     "Prefer paid order detection rules before payment-only update rules so paid order messages still create orders.",
     "Use only these condition operators: containsAny, containsAll, matchesRegex, amountDetected.",
     "Use only these actions: create_order, update_payment_status, needs_review, ask_follow_up.",
+    "For action states, set payment_status, message, or required_fields to null when they do not apply.",
     "Daily sales capture should use paid orders only; do not model pending, pay-later, unpaid, or partial sales.",
     "Always include a needs_review action state as the final else target.",
     "Return concise rule explanations for non-technical business owners."
@@ -417,6 +426,84 @@ function parseStructuredOutput(payload) {
   }
 
   return JSON.parse(outputText);
+}
+
+export function normalizeGeneratedWorkflow(generated) {
+  const workflow = generated?.workflow;
+
+  if (!workflow || typeof workflow !== "object") {
+    return generated;
+  }
+
+  const states = Array.isArray(workflow.states)
+    ? Object.fromEntries(workflow.states.map((state) => [state.id, normalizeGeneratedState(state)]))
+    : Object.fromEntries(
+        Object.entries(workflow.states ?? {}).map(([stateId, state]) => [stateId, normalizeGeneratedState(state)])
+      );
+
+  return {
+    ...generated,
+    workflow: {
+      ...workflow,
+      states
+    }
+  };
+}
+
+function normalizeGeneratedState(state) {
+  if (state?.type === "decision") {
+    return {
+      type: "decision",
+      rules: (state.rules ?? []).map((rule) => ({
+        id: rule.id,
+        if: normalizeGeneratedCondition(rule.if),
+        then: rule.then
+      })),
+      else: state.else
+    };
+  }
+
+  if (state?.type === "action") {
+    return {
+      type: "action",
+      action: state.action,
+      ...(state.payment_status ? { payment_status: state.payment_status } : {}),
+      ...(state.message ? { message: state.message } : {}),
+      ...(Array.isArray(state.required_fields) && state.required_fields.length
+        ? { required_fields: state.required_fields.filter(Boolean) }
+        : {})
+    };
+  }
+
+  return state;
+}
+
+function normalizeGeneratedCondition(condition = {}) {
+  const normalized = {};
+
+  if (Array.isArray(condition.containsAny)) {
+    const containsAny = condition.containsAny.map((phrase) => String(phrase).trim()).filter(Boolean);
+    if (containsAny.length) {
+      normalized.containsAny = containsAny;
+    }
+  }
+
+  if (Array.isArray(condition.containsAll)) {
+    const containsAll = condition.containsAll.map((phrase) => String(phrase).trim()).filter(Boolean);
+    if (containsAll.length) {
+      normalized.containsAll = containsAll;
+    }
+  }
+
+  if (condition.matchesRegex) {
+    normalized.matchesRegex = condition.matchesRegex;
+  }
+
+  if (typeof condition.amountDetected === "boolean") {
+    normalized.amountDetected = condition.amountDetected;
+  }
+
+  return normalized;
 }
 
 function sanitizeWorkflowId(workflowId) {

@@ -139,7 +139,8 @@ const shopConfigSchema = z.object({
   paynow_qr_image: z.string().max(1_500_000).default(""),
   bank_name: z.string().trim().max(80).default(""),
   bank_account_name: z.string().trim().max(120).default(""),
-  bank_account_number: z.string().trim().max(80).default("")
+  bank_account_number: z.string().trim().max(80).default(""),
+  footer_note: z.string().trim().max(200).default("")
 });
 
 const placeOrderSchema = z.object({
@@ -315,6 +316,16 @@ app.post("/auth/change-password", requireAuth(["user"]), (req, res, next) => {
 
 app.get("/config/shop", (_req, res) => {
   res.json(loadShopConfig());
+});
+
+app.get("/menu/preview", (_req, res, next) => {
+  try {
+    res.json({
+      products: listActiveMenuProducts().slice(0, 6)
+    });
+  } catch (error) {
+    next(error);
+  }
 });
 
 app.put("/config/shop", requireAuth(["admin"]), (req, res, next) => {
