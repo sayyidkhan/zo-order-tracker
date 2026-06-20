@@ -11,6 +11,15 @@ A simple web-based order and payment tracker for home businesses.
 - `/admin` - admin UI for orders, order rules, inventory, and branding.
 - `/tech-stack` - public architecture and stack notes.
 
+## Deployment Structure
+
+This repo is set up for one-folder Zo deployment:
+
+- `frontend/` and `backend/` remain in this repository.
+- `deploy-server.js` at the repo root serves `frontend/dist` and proxies backend APIs.
+- The live URL is https://zo-order-tracker-shab.zocomputer.io.
+- Backend APIs are same-origin paths, not a separate public URL.
+
 ## Prerequisites
 
 - Node.js 22.5+ for the backend SQLite runtime. Node 25 is tested locally.

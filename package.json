@@ -1,0 +1,18 @@
+{
+  "name": "zo-order-tracker",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "clear-cache": "rm -rf node_modules/.vite frontend/dist",
+    "install:app": "cd backend && npm install --include=dev --no-package-lock && cd ../frontend && npm install --include=dev --no-package-lock",
+    "build:frontend": "cd frontend && npm install --include=dev --no-package-lock && npm run build",
+    "build": "npm run clear-cache && npm run build:frontend",
+    "start": "npm run install:app && npm run build && node deploy-server.js",
+    "dev": "bun run clear-cache && NODE_ENV=development bun run --hot server.ts"
+  },
+  "dependencies": {
+    "@types/bun": "1.2.21",
+    "hono": "^4.10.6",
+    "vite": "^7.3.0"
+  }
+}

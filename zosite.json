@@ -1,0 +1,19 @@
+{
+  "name": "zo-order-tracker",
+  "local_port": 51374,
+  "entrypoint": "bun run dev",
+  "publish": {
+    "label": "zo-order-tracker",
+    "type": "http",
+    "entrypoint": "bun run prod",
+    "published_port": 55419,
+    "env": {
+      "NODE_ENV": "production",
+      "ZO_CLIENT_IDENTITY_TOKEN": "none",
+      "ZORDER_BACKEND_PORT": "4000"
+    }
+  },
+  "env": {
+    "ZORDER_BACKEND_PORT": "4000"
+  }
+}
