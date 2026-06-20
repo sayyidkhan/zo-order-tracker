@@ -4,36 +4,36 @@
 
 - Orders are messy and hard to track.
 - Payment tracking is manual.
-- Many small business owners still prefer to send and receive orders through Telegram.
+- Many small business owners still track orders and payments manually.
 
 ## Solution
 
-zorder is a simple Telegram order and payment tracker for home businesses.
+zorder is a simple web-based order and payment tracker for home businesses.
 
-Tagline: Turn Telegram orders into a simple paid/unpaid dashboard.
+Tagline: Turn messy orders into a simple paid/unpaid dashboard.
 
 ## Free Version
 
-- Owner pastes a Telegram chat into the website.
-- AI extracts the order details and payment status.
+- Owner enters or imports order details into the web app.
+- zorder applies a deterministic workflow to classify order and payment status.
 - Zo powers the backend.
 - Owner sees a simple order dashboard.
 
 ## Premium Version
 
-- Owner connects a Telegram bot.
+- Owner connects a supported messaging channel such as Telegram.
 - Orders are captured automatically.
-- Telegram bot usage costs are paid by the owner, not by Zo.
+- Messaging platform costs are paid by the owner, not by Zo.
 
 ## Positioning
 
-Not a CRM. Just a simple order and payment tracker for Telegram-based home businesses.
+Not a CRM. Just a simple order and payment tracker for home businesses.
 
 ## MVP Scope
 
 Build only:
 
-- Paste Telegram chat.
-- Extract order.
+- Enter or import order details.
+- Classify order and payment status with JSON workflows.
 - Track paid and unpaid orders.
 - Simple dashboard.

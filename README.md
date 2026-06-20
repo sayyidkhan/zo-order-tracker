@@ -1,3 +1,3 @@
 # zorder
 
-A simple agentic Telegram order and payment tracker for home businesses.
+A simple web-based order and payment tracker for home businesses.
