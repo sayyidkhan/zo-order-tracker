@@ -1131,8 +1131,38 @@ textarea:focus {
 .user-shop-menu-item {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  padding: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 94px;
+  padding: 10px 12px;
   background: oklch(0.99 0.004 275);
+}
+
+.user-shop-menu-image {
+  width: 68px;
+  height: 68px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  overflow: hidden;
+  color: var(--primary);
+  background: oklch(0.97 0.012 275);
+}
+
+.user-shop-menu-image img {
+  width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.user-shop-menu-copy {
+  display: grid;
+  gap: 3px;
+  min-width: 0;
 }
 
 .user-shop-menu-name {

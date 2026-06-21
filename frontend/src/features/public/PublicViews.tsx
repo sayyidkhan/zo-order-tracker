@@ -51,6 +51,7 @@ import type { AppRoute, AuthCredential, AuthMode, AuthRole, InventoryProduct, Sh
 import { techArchitectureSteps, techSourceDocs, techStackHighlights, techStackSections, apiBase } from "../../constants";
 import { BrandMark } from "../../components/BrandMark";
 import { ErrorNotice, PinInput } from "../../components/FormControls";
+import { ProductImageDisplay } from "../../components/ImagePreview";
 import { buildAcceptedPaymentMethods, fetchMenuPreview, formatAmount, readApiError, useStateValue } from "../../lib/domain";
 
 export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
@@ -264,6 +265,12 @@ export function WhyZoComputerView({ onNavigate }: { onNavigate: (route: AppRoute
       title: "Hosting and URL",
       copy: "The deploy target, hosting surface, and reachable URL are covered together.",
       icon: <Globe2 size={18} />
+    },
+    {
+      title: "Operator help",
+      copy:
+        "You can talk to Zo to clarify errors, inspect what changed, and fix common app issues even when the app is down.",
+      icon: <Bot size={18} />
     }
   ];
 
@@ -369,6 +376,11 @@ export function WhyZoComputerView({ onNavigate }: { onNavigate: (route: AppRoute
             <span>Start from 0</span>
             <strong>Scale cost with real usage</strong>
             <small>No heavy infra commitment before demand exists.</small>
+          </div>
+          <div className="why-zo-value-strip" aria-label="Main Zo Computer operator benefit">
+            <span>Best part</span>
+            <strong>Talk to Zo when things break</strong>
+            <small>Clarify issues and fix the app even when it is down. No developer is required for common fixes.</small>
           </div>
           <div className="why-zo-actions">
             <button className="primary-button" type="button" onClick={() => onNavigate("user")}>
@@ -515,6 +527,17 @@ export function WhyZoComputerView({ onNavigate }: { onNavigate: (route: AppRoute
         </div>
       </section>
 
+      <section className="why-zo-section" aria-labelledby="why-zo-talk-heading">
+        <div className="why-zo-scale-gate" aria-label="Zo operator support">
+          <strong id="why-zo-talk-heading">The best operator advantage: you can talk to Zo</strong>
+          <p>
+            If the app is confusing, stale, or even down, the merchant does not have to start by finding a developer.
+            They can ask Zo what is happening, clarify the issue, inspect the repo and deployment path, and get guided
+            fixes from the same workspace that runs the app.
+          </p>
+        </div>
+      </section>
+
       <section className="why-zo-split" aria-labelledby="why-zo-start-heading">
         <div className="why-zo-start-panel">
           <h2 id="why-zo-start-heading">You can start from zero</h2>
@@ -546,7 +569,8 @@ export function WhyZoComputerView({ onNavigate }: { onNavigate: (route: AppRoute
           <h2 id="why-zo-operator-heading">The operator reason</h2>
           <p>
             Zo Computer reduces the number of things you need to coordinate before you can learn from real usage.
-            Ship first, keep control of the data, then let cost and complexity grow only after users create demand.
+            Ship first, keep control of the data, and ask Zo for clarification or recovery help when something breaks.
+            Cost and complexity should grow only after users create demand.
           </p>
         </div>
         <button className="secondary-button" type="button" onClick={() => onNavigate("intro")}>
@@ -712,10 +736,17 @@ export function UserShopLanding({
             <ul className="user-shop-menu-grid">
               {previewProducts.map((product) => (
                 <li className="user-shop-menu-item" key={product.id ?? product.name}>
-                  <span className="user-shop-menu-name">{product.name}</span>
-                  <span className="user-shop-menu-meta">
-                    {product.category}
-                    {product.unit_price != null ? ` · ${formatAmount(product.unit_price, "SGD")}` : ""}
+                  <ProductImageDisplay
+                    imageUrl={product.image_url}
+                    name={product.name}
+                    className="user-shop-menu-image"
+                  />
+                  <span className="user-shop-menu-copy">
+                    <span className="user-shop-menu-name">{product.name}</span>
+                    <span className="user-shop-menu-meta">
+                      {product.category}
+                      {product.unit_price != null ? ` · ${formatAmount(product.unit_price, "SGD")}` : ""}
+                    </span>
                   </span>
                 </li>
               ))}
