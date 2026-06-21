@@ -24,6 +24,12 @@ Live demo:
 https://zo-order-tracker-shab.zocomputer.io
 ```
 
+60-second demo video:
+
+```text
+https://youtu.be/qhZGS4obUps
+```
+
 ## Who Should Read This
 
 If you are the merchant using an already deployed zorder app, start at **Merchant Setup**.
