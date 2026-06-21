@@ -247,11 +247,11 @@ Current implementation:
 
 ## Environment
 
-Backend:
+Repo-root `.env`:
 
 ```env
 NODE_ENV=development
-PORT=4000
+ZORDER_BACKEND_PORT=4000
 DATABASE_URL=file:./data/zorder.sqlite
 ZORDER_USER_USERNAME=user
 ZORDER_USER_PIN=123456
@@ -262,13 +262,7 @@ WORKFLOW_BUILDER_MODE=local
 # OPENAI_API_KEY=
 ```
 
-Frontend:
-
-```env
-VITE_API_BASE_URL=http://localhost:4000
-```
-
-When deployed same-origin, the frontend API base can be left unset.
+The frontend uses same-origin API paths by default. In local standalone Vite dev, those paths proxy to `http://localhost:4000`.
 
 ## Roadmap
 

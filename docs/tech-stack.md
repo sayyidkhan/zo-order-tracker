@@ -60,7 +60,7 @@ deployment/
 ```text
 Browser
   -> frontend Vite React bundle
-  -> same-origin deploy server or local Vite API base
+  -> same-origin deploy server or local Vite proxy
   -> Express backend
   -> SQLite database
   -> JSON workflow files and user data
@@ -70,7 +70,7 @@ Local development:
 
 - backend runs on `PORT=4000`
 - frontend runs through Vite, usually `http://127.0.0.1:5173`
-- frontend reads `VITE_API_BASE_URL` from `frontend/.env`
+- frontend uses same-origin API paths by default; Vite proxies those paths to the local backend
 
 Production deployment:
 
@@ -112,11 +112,11 @@ Ignored local data:
 
 ## Environment Variables
 
-Backend:
+Repo-root `.env`:
 
 ```env
 NODE_ENV=development
-PORT=4000
+ZORDER_BACKEND_PORT=4000
 DATABASE_URL=file:./data/zorder.sqlite
 ZORDER_USER_USERNAME=user
 ZORDER_USER_PIN=123456
@@ -125,12 +125,6 @@ ZORDER_ADMIN_USERNAME=admin
 ZORDER_ADMIN_PIN=654321
 WORKFLOW_BUILDER_MODE=local
 # OPENAI_API_KEY=
-```
-
-Frontend:
-
-```env
-VITE_API_BASE_URL=http://localhost:4000
 ```
 
 Deployment:

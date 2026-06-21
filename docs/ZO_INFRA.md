@@ -53,8 +53,9 @@ Everything else falls back to the SPA frontend.
 Backend/local:
 
 ```env
+# Zo injects PORT for the public service. Leave it unset in `.env`.
+# PORT=<public service port or local port>
 NODE_ENV=production
-PORT=<public service port or local port>
 ZORDER_BACKEND_PORT=4000
 DATABASE_URL=file:./data/zorder.sqlite
 ZORDER_USER_USERNAME=<demo user>
@@ -66,13 +67,12 @@ WORKFLOW_BUILDER_MODE=local
 # OPENAI_API_KEY=<optional setup-only drafting>
 ```
 
-Frontend:
+Rules:
 
-```env
-VITE_API_BASE_URL=http://localhost:4000
-```
-
-For same-origin production, the frontend can use relative API paths by leaving `VITE_API_BASE_URL` unset.
+- Zo/system env vars take precedence over the repo-root `.env`.
+- `backend/.env` is still read as a legacy fallback.
+- Keep deployment secrets in `.env` on Zo or in Zo env config, not in git.
+- Leave `VITE_API_BASE_URL` unset in deployment so API calls stay same-origin.
 
 ## Deployment Commands
 

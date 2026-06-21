@@ -4,8 +4,11 @@ import { createReadStream, existsSync, statSync } from "node:fs";
 import { extname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { dirname } from "node:path";
+import { loadEnvFiles } from "./env-loader.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnvFiles([resolve(__dirname, ".env"), resolve(__dirname, "backend/.env")]);
+
 const frontendDist = resolve(__dirname, "frontend/dist");
 const backendDir = resolve(__dirname, "backend");
 const port = Number(process.env.PORT || 8080);

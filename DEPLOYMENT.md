@@ -1,12 +1,20 @@
-# Deployment
+# One-Push Zo Deployment
 
-This folder gives `zo-order-tracker` one stable deployment path on Zo.
+This repo gives `zo-order-tracker` one stable deployment path on Zo. After the one-time env setup, a pushed commit should be enough for `npm run deploy:zo` on Zo to pull, rebuild, restart, and verify the live service.
 
 ## Problem It Solves
 
 `git pull` updates the repository, but the live Zo service keeps running the old process until it is restarted. That is why the website can stay stale after the latest code has been pulled.
 
 ## Normal Deploy
+
+From local:
+
+```bash
+git add .
+git commit -m "your change"
+git push
+```
 
 From the repo root:
 
@@ -54,3 +62,11 @@ npm run health:service
 The production service should start through `deployment/service-entrypoint.sh`.
 
 That script reuses the existing build when the current commit already has a recorded successful build. If the commit changed, dependencies are installed, the frontend is rebuilt, and then `deploy-server.js` is started.
+
+Runtime env loading is centralized:
+
+- Zo/system env vars take precedence.
+- `.env` at the repo root is the canonical local/deployment file.
+- `backend/.env` is still read as a legacy fallback.
+- `frontend/.env` is not required for production because the frontend defaults to same-origin API paths.
+- `PORT` should stay unset in `.env` because Zo injects it.

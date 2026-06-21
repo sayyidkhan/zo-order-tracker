@@ -5,14 +5,17 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(__dirname, "..");
-const envPath = path.join(backendDir, ".env");
-const examplePath = path.join(backendDir, ".env.example");
+const rootDir = path.resolve(backendDir, "..");
+const envPath = path.join(rootDir, ".env");
+const legacyEnvPath = path.join(backendDir, ".env");
+const examplePath = path.join(rootDir, ".env.example");
+const legacyExamplePath = path.join(backendDir, ".env.example");
 
 const args = parseArgs(process.argv.slice(2));
 const useRandom = Boolean(args.random);
 
 if (!fs.existsSync(envPath)) {
-  const template = fs.existsSync(examplePath) ? fs.readFileSync(examplePath, "utf8") : "";
+  const template = readEnvTemplate();
   fs.writeFileSync(envPath, template, "utf8");
 }
 
@@ -38,13 +41,30 @@ envText = upsertEnv(envText, "ZORDER_USER_USERNAME", userUsername);
 envText = upsertEnv(envText, "ZORDER_USER_PIN", userPin);
 envText = upsertEnv(envText, "ZORDER_ADMIN_USERNAME", adminUsername);
 envText = upsertEnv(envText, "ZORDER_ADMIN_PIN", adminPin);
+envText = removeEnv(envText, "PORT");
 envText = removeEnv(envText, "ZORDER_USER_PASSCODE");
 envText = removeEnv(envText, "ZORDER_ADMIN_PASSCODE");
 fs.writeFileSync(envPath, ensureTrailingNewline(envText), "utf8");
 
-console.log("Seeded MVP auth users in backend/.env");
+console.log("Seeded MVP auth users in .env");
 console.log(`User login: ${userUsername} / ${userPin}`);
 console.log(`Admin login: ${adminUsername} / ${adminPin}`);
+
+function readEnvTemplate() {
+  if (fs.existsSync(legacyEnvPath)) {
+    return fs.readFileSync(legacyEnvPath, "utf8");
+  }
+
+  if (fs.existsSync(examplePath)) {
+    return fs.readFileSync(examplePath, "utf8");
+  }
+
+  if (fs.existsSync(legacyExamplePath)) {
+    return fs.readFileSync(legacyExamplePath, "utf8");
+  }
+
+  return "";
+}
 
 function parseArgs(argv) {
   return argv.reduce((current, arg) => {

@@ -5,7 +5,7 @@
   "publish": {
     "label": "zo-order-tracker",
     "type": "http",
-    "entrypoint": "bun run prod",
+    "entrypoint": "npm run prod",
     "published_port": 55419,
     "env": {
       "NODE_ENV": "production",

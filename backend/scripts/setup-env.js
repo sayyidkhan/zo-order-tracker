@@ -6,8 +6,11 @@ import { fileURLToPath } from "node:url";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(__dirname, "..");
-const envPath = path.join(backendDir, ".env");
-const examplePath = path.join(backendDir, ".env.example");
+const rootDir = path.resolve(backendDir, "..");
+const envPath = path.join(rootDir, ".env");
+const legacyEnvPath = path.join(backendDir, ".env");
+const examplePath = path.join(rootDir, ".env.example");
+const legacyExamplePath = path.join(backendDir, ".env.example");
 
 const args = parseArgs(process.argv.slice(2));
 const isCi = Boolean(args.ci);
@@ -16,6 +19,7 @@ const deprecatedEnvKeys = [
   "AI_SETUP_ENABLED",
   "GPT-API-KEY",
   "GPT_API_KEY",
+  "PORT",
   "TELEGRAM_BOT_TOKEN",
   "TELEGRAM_WEBHOOK_SECRET",
   "USE_OPENAI_WORKFLOW_BUILDER"
@@ -29,9 +33,9 @@ const envFields = [
     defaultValue: "development"
   },
   {
-    key: "PORT",
-    flag: "port",
-    prompt: "Backend port",
+    key: "ZORDER_BACKEND_PORT",
+    flag: "backend-port",
+    prompt: "Internal backend port",
     defaultValue: "4000"
   },
   {
@@ -159,8 +163,16 @@ function readInitialEnv() {
     return fs.readFileSync(envPath, "utf8");
   }
 
+  if (fs.existsSync(legacyEnvPath)) {
+    return fs.readFileSync(legacyEnvPath, "utf8");
+  }
+
   if (fs.existsSync(examplePath)) {
     return fs.readFileSync(examplePath, "utf8");
+  }
+
+  if (fs.existsSync(legacyExamplePath)) {
+    return fs.readFileSync(legacyExamplePath, "utf8");
   }
 
   return "";
