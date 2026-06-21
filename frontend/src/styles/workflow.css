@@ -910,6 +910,74 @@ textarea:focus {
   font-size: 0.94rem;
 }
 
+.demo-login-hints {
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 10px;
+}
+
+.demo-login-heading {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.demo-login-list {
+  display: grid;
+  gap: 8px;
+}
+
+.demo-login-option {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 10px 12px;
+  background: oklch(0.99 0.004 275);
+  color: var(--ink);
+  display: grid;
+  grid-template-columns: minmax(78px, 0.38fr) 1fr;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  font: inherit;
+  transition: border-color 180ms ease, background 180ms ease, box-shadow 180ms ease, transform 180ms ease;
+}
+
+.demo-login-option:hover,
+.demo-login-option:focus-visible {
+  outline: none;
+  border-color: var(--primary);
+  background: oklch(1 0 0);
+  box-shadow: 0 0 0 4px oklch(0.52 0.19 275 / 0.1);
+  transform: translateY(-1px);
+}
+
+.demo-login-option:disabled {
+  cursor: not-allowed;
+  opacity: 0.64;
+  transform: none;
+}
+
+.demo-login-role {
+  color: var(--primary);
+  font-size: 0.86rem;
+  font-weight: 800;
+}
+
+.demo-login-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  color: var(--muted);
+  font-size: 0.84rem;
+  font-weight: 650;
+}
+
 .auth-form {
   margin-top: 22px;
   display: grid;
@@ -1506,34 +1574,6 @@ textarea:focus {
   color: var(--success);
   font-size: 0.88rem;
   font-weight: 700;
-}
-
-.demo-credentials {
-  margin: 0 0 18px;
-  padding: 14px;
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  background: var(--surface);
-}
-
-.demo-credentials-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
-}
-
-.demo-credential-card {
-  display: grid;
-  gap: 4px;
-  min-width: 0;
-  padding: 12px;
-  border-radius: 10px;
-  background: var(--bg);
-  border: 1px solid var(--border);
-}
-
-.demo-credential-card strong {
-  font-size: 0.92rem;
 }
 
 .demo-credential-card span {

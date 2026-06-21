@@ -48,11 +48,24 @@ import {
   X
 } from "lucide-react";
 import type { AppRoute, AuthCredential, AuthMode, AuthRole, InventoryProduct, ShopBranding } from "../../types";
-import { techArchitectureSteps, techSourceDocs, techStackHighlights, techStackSections, apiBase, demoCredentialCards } from "../../constants";
+import {
+  apiBase,
+  techArchitectureSteps,
+  techSourceDocs,
+  techStackHighlights,
+  techStackSections
+} from "../../constants";
 import { BrandMark } from "../../components/BrandMark";
 import { ErrorNotice, PinInput } from "../../components/FormControls";
 import { ProductImageDisplay } from "../../components/ImagePreview";
-import { buildAcceptedPaymentMethods, fetchMenuPreview, formatAmount, readApiError, useStateValue } from "../../lib/domain";
+import {
+  buildAcceptedPaymentMethods,
+  fetchDemoLoginCredentials,
+  fetchMenuPreview,
+  formatAmount,
+  readApiError,
+  useStateValue
+} from "../../lib/domain";
 
 export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
   return (
@@ -809,6 +822,12 @@ function LoginView({
   const isSignUp = mode === "sign-up";
   const isPinReady = /^\d{6}$/.test(pin);
   const isConfirmPinReady = !isSignUp || /^\d{6}$/.test(confirmPin);
+  const demoCredentialsQuery = useQuery({
+    queryKey: ["demo-login-credentials"],
+    queryFn: fetchDemoLoginCredentials,
+    staleTime: 5 * 60 * 1000
+  });
+  const demoLoginCredentials = demoCredentialsQuery.data ?? [];
 
   useEffect(() => {
     setMode(initialMode);
@@ -860,6 +879,13 @@ function LoginView({
     setConfirmPin("");
   }
 
+  function applyDemoCredential(credential: AuthCredential) {
+    setUsername(credential.username);
+    setPin(credential.pin);
+    setConfirmPin("");
+    setError(null);
+  }
+
   return (
     <section className="auth-panel auth-panel--login" aria-labelledby="auth-heading">
       <div className="auth-panel-header">
@@ -878,19 +904,27 @@ function LoginView({
           : "Enter your username and 6-digit PIN. You will be routed to the right workspace."}
       </p>
 
-      {!isSignUp && demoCredentialCards.length ? (
-        <section className="demo-credentials" aria-label="Demo credentials">
-          <p className="section-label">demo logins</p>
-          <div className="demo-credentials-grid">
-            {demoCredentialCards.map((credential) => (
-              <div className="demo-credential-card" key={credential.label}>
-                <strong>{credential.label}</strong>
-                <span>Username: {credential.username}</span>
-                <span>PIN: {credential.pin}</span>
-              </div>
+      {!isSignUp && demoLoginCredentials.length > 0 ? (
+        <div className="demo-login-hints" aria-label="Demo login credentials">
+          <p className="demo-login-heading">Demo credentials</p>
+          <div className="demo-login-list">
+            {demoLoginCredentials.map((credential) => (
+              <button
+                className="demo-login-option"
+                type="button"
+                key={credential.role}
+                onClick={() => applyDemoCredential(credential)}
+                disabled={isPending}
+              >
+                <span className="demo-login-role">{credential.role}</span>
+                <span className="demo-login-values">
+                  <span>Username: {credential.username}</span>
+                  <span>PIN: {credential.pin}</span>
+                </span>
+              </button>
             ))}
           </div>
-        </section>
+        </div>
       ) : null}
 
       <form className="auth-form" onSubmit={handleSubmit}>

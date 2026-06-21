@@ -10,6 +10,7 @@ import type {
   AuthState,
   CapturePeriodDays,
   CustomerMenuSnapshot,
+  DemoLoginCredential,
   FulfillmentStatus,
   InventoryProduct,
   InventoryProductDraft,
@@ -1139,6 +1140,20 @@ export async function fetchMenuPreview(): Promise<InventoryProduct[]> {
 
     const payload = (await response.json()) as { products?: InventoryProduct[] };
     return payload.products ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export async function fetchDemoLoginCredentials(): Promise<DemoLoginCredential[]> {
+  try {
+    const response = await fetch(`${apiBase}/auth/demo-credentials`);
+    if (!response.ok) {
+      return [];
+    }
+
+    const payload = (await response.json()) as { credentials?: DemoLoginCredential[] };
+    return payload.credentials ?? [];
   } catch {
     return [];
   }

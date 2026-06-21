@@ -38,6 +38,7 @@ const adminCredential = {
 const demoUserProfileDefaults = {
   email: process.env.ZORDER_USER_EMAIL ?? "user@example.com"
 };
+const showDemoCredentials = process.env.ZORDER_SHOW_DEMO_CREDENTIALS !== "false";
 
 app.use(cors());
 app.use(express.json({ limit: "2mb" }));
@@ -206,6 +207,25 @@ app.get("/health", (_req, res) => {
     service: "zorder-api",
     runtime: "express",
     workflow_engine: "deterministic-json"
+  });
+});
+
+app.get("/auth/demo-credentials", (_req, res) => {
+  res.json({
+    credentials: showDemoCredentials
+      ? [
+          {
+            role: "Customer",
+            username: userCredential.username,
+            pin: userCredential.pin
+          },
+          {
+            role: "Admin",
+            username: adminCredential.username,
+            pin: adminCredential.pin
+          }
+        ]
+      : []
   });
 });
 
