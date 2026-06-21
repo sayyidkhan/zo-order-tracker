@@ -1,0 +1,200 @@
+.journey-tabs {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  grid-template-columns: repeat(5, minmax(132px, 1fr));
+  gap: 6px;
+  padding: 6px;
+  background: oklch(1 0 0 / 0.74);
+  box-shadow: var(--shadow-soft);
+  overflow-x: auto;
+}
+
+.journey-tab {
+  min-width: 0;
+  min-height: 54px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 800;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.journey-tab:hover,
+.journey-tab:focus-visible {
+  color: var(--primary);
+  background: var(--surface);
+  outline: none;
+}
+
+.journey-tab.is-active {
+  border-color: oklch(0.82 0.06 275);
+  color: white;
+  background: linear-gradient(135deg, var(--primary), oklch(0.48 0.2 295));
+  box-shadow: 0 8px 18px oklch(0.52 0.19 275 / 0.22);
+}
+
+.journey-tab-copy {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+  text-align: left;
+}
+
+.journey-tab-label,
+.journey-tab-meta {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.journey-tab-meta {
+  color: currentColor;
+  font-size: 0.72rem;
+  font-weight: 650;
+  opacity: 0.72;
+}
+
+.journey-tab-panel {
+  min-width: 0;
+}
+
+.journey-tab-panel .orders-section,
+.journey-tab-panel .metric-grid {
+  margin-top: 0;
+  margin-bottom: 0;
+}
+
+.admin-tabs {
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  background: oklch(1 0 0 / 0.74);
+  box-shadow: var(--shadow-soft);
+}
+
+.admin-tab {
+  min-width: 0;
+  min-height: 42px;
+  border: 1px solid transparent;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  color: var(--muted);
+  background: transparent;
+  font-size: 0.84rem;
+  font-weight: 800;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.admin-tab:hover,
+.admin-tab:focus-visible {
+  color: var(--primary);
+  background: var(--surface);
+  outline: none;
+}
+
+.admin-tab.is-active {
+  border-color: oklch(0.82 0.06 275);
+  color: white;
+  background: linear-gradient(135deg, var(--primary), oklch(0.48 0.2 295));
+  box-shadow: 0 8px 18px oklch(0.52 0.19 275 / 0.22);
+}
+
+.admin-tab-panel {
+  min-width: 0;
+}
+
+.order-rules-grid {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(300px, 0.8fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.workflow-builder-tabs {
+  margin-top: 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+  padding: 6px;
+  background: var(--surface-strong);
+}
+
+.workflow-builder-tab {
+  min-width: 0;
+  min-height: 54px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  padding: 8px 10px;
+  color: var(--muted);
+  background: transparent;
+  text-align: left;
+  transition: background 180ms ease, color 180ms ease, border-color 180ms ease;
+}
+
+.workflow-builder-tab:hover,
+.workflow-builder-tab:focus-visible {
+  color: var(--primary);
+  background: var(--surface);
+  outline: none;
+}
+
+.workflow-builder-tab.is-active {
+  border-color: oklch(0.82 0.06 275);
+  color: white;
+  background: linear-gradient(135deg, var(--primary), oklch(0.48 0.2 295));
+  box-shadow: 0 8px 18px oklch(0.52 0.19 275 / 0.18);
+}
+
+.workflow-builder-tab:disabled {
+  cursor: not-allowed;
+  opacity: 0.58;
+}
+
+.workflow-builder-tab span {
+  min-width: 0;
+  display: grid;
+  gap: 1px;
+}
+
+.workflow-builder-tab strong,
+.workflow-builder-tab small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.workflow-builder-tab strong {
+  font-size: 0.88rem;
+}
+
+.workflow-builder-tab small {
+  color: currentColor;
+  font-size: 0.72rem;
+  font-weight: 700;
+  opacity: 0.75;
+}
+
+.workflow-builder-tab-panel {
+  margin-top: 14px;
+}

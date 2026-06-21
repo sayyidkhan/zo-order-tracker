@@ -88,7 +88,7 @@ Backend endpoint:
 POST /agent/setup-workflow
 ```
 
-This endpoint may call GPT using `GPT-API-KEY` from `backend/.env`. The generated workflow is still plain JSON and should be tested through the deterministic runner before daily use.
+This endpoint uses the local deterministic workflow builder by default. To explicitly enable setup-only OpenAI drafting, set `WORKFLOW_BUILDER_MODE=openai` and `OPENAI_API_KEY` in `backend/.env`. The generated workflow is still plain JSON and should be tested through the deterministic runner before daily use.
 
 ## UI Contract
 

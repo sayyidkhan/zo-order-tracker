@@ -11,6 +11,15 @@ const examplePath = path.join(backendDir, ".env.example");
 
 const args = parseArgs(process.argv.slice(2));
 const isCi = Boolean(args.ci);
+const deprecatedEnvKeys = [
+  "ACTIVE_WORKFLOW_ID",
+  "AI_SETUP_ENABLED",
+  "GPT-API-KEY",
+  "GPT_API_KEY",
+  "TELEGRAM_BOT_TOKEN",
+  "TELEGRAM_WEBHOOK_SECRET",
+  "USE_OPENAI_WORKFLOW_BUILDER"
+];
 
 const envFields = [
   {
@@ -24,6 +33,12 @@ const envFields = [
     flag: "port",
     prompt: "Backend port",
     defaultValue: "4000"
+  },
+  {
+    key: "DATABASE_URL",
+    flag: "database-url",
+    prompt: "SQLite database URL",
+    defaultValue: "file:./data/zorder.sqlite"
   },
   {
     key: "ZORDER_USER_USERNAME",
@@ -60,53 +75,16 @@ const envFields = [
     validate: validatePin
   },
   {
-    key: "GPT-API-KEY",
-    flag: "gpt-api-key",
-    prompt: "OpenAI/GPT API key for setup-only workflow generation",
-    defaultValue: "",
-    secret: true,
-    optional: true
+    key: "WORKFLOW_BUILDER_MODE",
+    flag: "workflow-builder-mode",
+    prompt: "Workflow builder mode",
+    defaultValue: "local",
+    validate: validateWorkflowBuilderMode
   },
   {
     key: "OPENAI_API_KEY",
     flag: "openai-api-key",
-    prompt: "Fallback OpenAI API key",
-    defaultValue: "",
-    secret: true,
-    optional: true,
-    commentedWhenEmpty: true
-  },
-  {
-    key: "OPENAI_RESPONSES_URL",
-    flag: "openai-responses-url",
-    prompt: "OpenAI Responses API URL",
-    defaultValue: "https://api.openai.com/v1/responses"
-  },
-  {
-    key: "GPT_MODEL",
-    flag: "gpt-model",
-    prompt: "GPT model",
-    defaultValue: "gpt-5.5"
-  },
-  {
-    key: "DATABASE_URL",
-    flag: "database-url",
-    prompt: "SQLite database URL",
-    defaultValue: "file:./data/zorder.sqlite"
-  },
-  {
-    key: "TELEGRAM_BOT_TOKEN",
-    flag: "telegram-bot-token",
-    prompt: "Telegram bot token",
-    defaultValue: "",
-    secret: true,
-    optional: true,
-    commentedWhenEmpty: true
-  },
-  {
-    key: "TELEGRAM_WEBHOOK_SECRET",
-    flag: "telegram-webhook-secret",
-    prompt: "Telegram webhook secret",
+    prompt: "OpenAI API key for setup-only workflow generation",
     defaultValue: "",
     secret: true,
     optional: true,
@@ -115,6 +93,9 @@ const envFields = [
 ];
 
 let envText = readInitialEnv();
+for (const key of deprecatedEnvKeys) {
+  envText = removeEnvKey(envText, key);
+}
 const currentEnv = parseEnv(envText);
 const rl = isCi ? null : readline.createInterface({ input, output });
 const updatedKeys = [];
@@ -164,6 +145,12 @@ function validateValue(field, value) {
 function validatePin(value, key) {
   if (!/^\d{6}$/.test(value)) {
     throw new Error(`${key} must be exactly 6 digits`);
+  }
+}
+
+function validateWorkflowBuilderMode(value, key) {
+  if (!["local", "openai"].includes(value)) {
+    throw new Error(`${key} must be "local" or "openai"`);
   }
 }
 
@@ -217,6 +204,11 @@ function upsertEnv(text, key, value, options = {}) {
   }
 
   return `${ensureTrailingNewline(text)}${line}\n`;
+}
+
+function removeEnvKey(text, key) {
+  const escapedKey = key.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  return text.replace(new RegExp(`^#?\\s*${escapedKey}=.*\\n?`, "gm"), "");
 }
 
 function formatEnvValue(value) {

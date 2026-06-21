@@ -1,0 +1,429 @@
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
+}
+
+/* Final mobile admin overrides. Keep these after the broad route resets above. */
+@media (max-width: 719px) {
+  .app-shell.is-authenticated {
+    overflow-x: clip;
+  }
+
+  .workspace.is-authenticated {
+    width: 100%;
+    max-width: 100%;
+    padding:
+      max(14px, env(safe-area-inset-top))
+      max(14px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom))
+      max(14px, env(safe-area-inset-left));
+  }
+
+  .workspace.is-authenticated .topbar {
+    gap: 14px;
+    margin-bottom: 18px;
+  }
+
+  .workspace.is-authenticated .topbar h1 {
+    font-size: clamp(1.85rem, 10vw, 2.4rem);
+    line-height: 1.04;
+  }
+
+  .workspace.is-authenticated .topbar-actions,
+  .workspace.is-authenticated .logout-button {
+    width: 100%;
+  }
+
+  .workspace.is-authenticated .logout-button {
+    min-height: 46px;
+    border-radius: var(--radius-sm);
+    justify-content: center;
+  }
+
+  .admin-grid,
+  .data-grid,
+  .order-rules-grid {
+    gap: 12px;
+  }
+
+  .admin-workspace {
+    gap: 12px;
+  }
+
+  .admin-tabs {
+    border-radius: var(--radius-sm);
+    gap: 6px;
+    padding: 6px;
+  }
+
+  .admin-tab {
+    min-height: 44px;
+    padding-inline: 8px;
+    font-size: 0.8rem;
+  }
+
+  .inventory-add-row {
+    grid-template-columns: 1fr;
+  }
+
+  .inventory-add-button {
+    width: 100%;
+  }
+
+  .table-wrap table {
+    min-width: 0;
+  }
+
+  .table-wrap thead {
+    display: none;
+  }
+
+  .table-wrap table,
+  .table-wrap tbody,
+  .table-wrap tr,
+  .table-wrap td {
+    display: block;
+  }
+
+  .table-wrap tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    margin-bottom: 10px;
+    background: var(--bg);
+  }
+
+  .table-wrap td {
+    border-bottom: 0;
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
+    align-items: start;
+    padding: 8px 0;
+  }
+
+  .table-wrap td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .table-wrap td[colspan] {
+    display: block;
+  }
+
+  .table-wrap td[colspan]::before {
+    content: "";
+  }
+
+  .inventory-table {
+    min-width: 0;
+  }
+
+  .inventory-table thead {
+    display: none;
+  }
+
+  .inventory-table,
+  .inventory-table tbody,
+  .inventory-table tr,
+  .inventory-table td {
+    display: block;
+  }
+
+  .inventory-table tr {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 10px;
+    margin: 10px;
+    background: var(--bg);
+  }
+
+  .inventory-table td {
+    border-bottom: 0;
+    display: grid;
+    grid-template-columns: 86px minmax(0, 1fr);
+    gap: 10px;
+    align-items: center;
+    padding: 8px 0;
+  }
+
+  .inventory-table td::before {
+    content: attr(data-label);
+    color: var(--muted);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+  }
+
+  .inventory-table td[colspan] {
+    display: block;
+  }
+
+  .inventory-table td[colspan]::before {
+    content: "";
+  }
+
+  .shop-branding-panel {
+    grid-column: auto;
+  }
+
+  .shop-branding-panel .panel-heading {
+    gap: 10px;
+    margin-bottom: 12px;
+  }
+
+  .shop-branding-panel .accent-icon {
+    flex: 0 0 auto;
+    margin-top: 2px;
+  }
+
+  .shop-branding-panel .panel-copy {
+    margin-bottom: 14px;
+    font-size: 0.9rem;
+    line-height: 1.5;
+  }
+
+  .shop-branding-panel .panel-copy code {
+    overflow-wrap: anywhere;
+  }
+
+  .branding-preview {
+    padding: 14px;
+    margin-bottom: 16px;
+  }
+
+  .branding-preview .auth-brand {
+    align-items: center;
+    min-width: 0;
+  }
+
+  .branding-preview .brand-glyph {
+    width: 44px;
+    height: 44px;
+    border-radius: 12px;
+  }
+
+  .branding-preview .brand-name {
+    min-width: 0;
+    font-size: 1.35rem;
+    line-height: 1.1;
+    overflow-wrap: anywhere;
+  }
+
+  .branding-preview-tagline {
+    margin-top: 14px;
+    font-size: 1.05rem;
+    line-height: 1.2;
+  }
+
+  .branding-preview-description {
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  .branding-form {
+    gap: 12px;
+  }
+
+  .branding-form-row {
+    grid-template-columns: 1fr;
+  }
+
+  .branding-payment-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .branding-mark-input {
+    text-align: left;
+  }
+
+  .input-field,
+  input,
+  textarea {
+    font-size: 16px;
+  }
+
+  .branding-save {
+    min-height: 48px;
+  }
+}
+
+@media (max-width: 620px) {
+  .order-method-actions,
+  .order-chatbot-steps {
+    grid-template-columns: 1fr;
+  }
+
+  .order-method-card {
+    min-height: 126px;
+    grid-template-columns: 44px minmax(0, 1fr);
+    align-items: start;
+  }
+
+  .order-method-card:not(.is-recommended) {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+    align-items: center;
+  }
+
+  .order-method-badge {
+    grid-column: 2;
+    justify-self: start;
+  }
+
+  .chatbot-product-picker,
+  .chatbot-action-card,
+  .chatbot-browse-button {
+    margin-left: 0;
+  }
+
+  .chatbot-action-row,
+  .chatbot-complete-card {
+    grid-template-columns: 1fr;
+    justify-content: stretch;
+  }
+
+  .chatbot-action-row .primary-button,
+  .chatbot-action-row .secondary-button,
+  .chatbot-complete-card .primary-button,
+  .chatbot-complete-card .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .static-order-flow-step {
+    grid-template-columns: 34px minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .static-order-flow-index {
+    width: 32px;
+    height: 32px;
+  }
+
+  .static-order-flow-stage {
+    padding: 12px;
+  }
+
+  .static-order-flow-stage-header,
+  .static-customer-screen-bar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .static-customer-screen-bar strong {
+    text-align: left;
+  }
+
+  .static-customer-screen-body {
+    min-height: auto;
+    padding: 12px;
+  }
+
+  .static-customer-choice,
+  .static-customer-payment-grid,
+  .static-customer-product,
+  .static-customer-summary > div {
+    grid-template-columns: 1fr;
+  }
+
+  .static-customer-choice {
+    align-items: start;
+  }
+
+  .static-customer-choice b {
+    justify-self: start;
+  }
+
+  .static-customer-product,
+  .static-customer-summary > div {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .static-customer-summary b {
+    text-align: left;
+  }
+
+  .static-order-flow-controls .primary-button,
+  .static-order-flow-controls .secondary-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .customer-payment-options {
+    grid-template-columns: 1fr;
+  }
+
+  .customer-payment-option {
+    align-items: center;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-tabs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .admin-tab {
+    justify-content: flex-start;
+    padding-inline: 12px;
+  }
+
+  .workflow-chat-log {
+    height: 360px;
+    padding: 10px;
+  }
+
+  .workflow-chat-bubble {
+    max-width: calc(100% - 44px);
+  }
+
+  .workflow-builder-tabs {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-composer-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-test-heading,
+  .workflow-traversal-actions,
+  .workflow-customer-actions {
+    display: grid;
+  }
+
+  .workflow-customer-path {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .workflow-traversal-actions > div,
+  .workflow-customer-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+  }
+
+  .workflow-quantity-card {
+    display: grid;
+  }
+}
+
+.workflow-output {
+  grid-template-columns: repeat(auto-fit, minmax(128px, 1fr));
+}
+
+@media (max-width: 420px) {
+  .workflow-output {
+    grid-template-columns: 1fr;
+  }
+}

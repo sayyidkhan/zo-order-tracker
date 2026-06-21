@@ -154,18 +154,18 @@ JSON upload format:
 
 Runtime order tracking is deterministic and does not require an AI key.
 
-AI is only used to generate starter workflow JSON in the admin setup flow. To enable it, set one of these in `backend/.env`:
+AI is only used to generate starter workflow JSON in the admin setup flow. To enable it, set these in `backend/.env`:
 
 ```env
-GPT-API-KEY=your_api_key_here
-# or
+WORKFLOW_BUILDER_MODE=openai
 OPENAI_API_KEY=your_api_key_here
 ```
 
-The default model is:
+The code has defaults for the Responses endpoint and model. Override them only when needed:
 
 ```env
-GPT_MODEL=gpt-5.5
+# OPENAI_RESPONSES_URL=https://api.openai.com/v1/responses
+# GPT_MODEL=gpt-5.5
 ```
 
 ## Zo Deployment

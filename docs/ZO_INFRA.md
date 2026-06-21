@@ -109,24 +109,21 @@ For the demo, SQLite is enough because:
 NODE_ENV=production
 PORT=<injected by Zo service>
 DATABASE_URL=file:./data/zorder.sqlite
-ACTIVE_WORKFLOW_ID=default-order-flow
 ZORDER_USER_USERNAME=<set demo user username>
 ZORDER_USER_PIN=<set 6-digit user PIN>
+ZORDER_USER_EMAIL=<set demo user email>
 ZORDER_ADMIN_USERNAME=<set demo admin username>
 ZORDER_ADMIN_PIN=<set 6-digit admin PIN>
-AI_SETUP_ENABLED=false
-GPT_API_KEY=<optional, setup only>
-TELEGRAM_BOT_TOKEN=<future only>
-TELEGRAM_WEBHOOK_SECRET=<future only>
+WORKFLOW_BUILDER_MODE=local
+# OPENAI_API_KEY=<optional, setup only>
 ```
 
 Rules:
 
 - `ZORDER_USER_USERNAME` and `ZORDER_USER_PIN` protect the `/user` surface and daily order-processing API calls.
 - `ZORDER_ADMIN_USERNAME` and `ZORDER_ADMIN_PIN` protect the `/admin` surface and workflow setup APIs.
-- `AI_SETUP_ENABLED` should default to `false`.
+- `WORKFLOW_BUILDER_MODE` should stay `local` unless setup-only OpenAI drafting is explicitly needed.
 - Runtime order processing must not require an AI key.
-- Telegram variables are reserved for the future integration path.
 
 ## Zo Services Plan
 
