@@ -45,8 +45,29 @@ import {
 } from "lucide-react";
 import type { AuthRole, ShopBranding, TechStackSection, WorkflowSetupStepId } from "./types";
 
+type DemoCredentialCard = {
+  label: string;
+  username: string;
+  pin: string;
+};
+
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim();
+const showDemoCredentials = import.meta.env.VITE_SHOW_DEMO_CREDENTIALS?.trim().toLowerCase() === "true";
 export const apiBase = configuredApiBase ? configuredApiBase.replace(/\/$/, "") : "";
+export const demoCredentialCards: DemoCredentialCard[] = showDemoCredentials
+  ? [
+      {
+        label: "Customer demo",
+        username: import.meta.env.VITE_DEMO_USER_USERNAME?.trim() || "user",
+        pin: import.meta.env.VITE_DEMO_USER_PIN?.trim() || "123456"
+      },
+      {
+        label: "Admin demo",
+        username: import.meta.env.VITE_DEMO_ADMIN_USERNAME?.trim() || "admin",
+        pin: import.meta.env.VITE_DEMO_ADMIN_PIN?.trim() || "654321"
+      }
+    ]
+  : [];
 
 export const sampleMessages = [
   "Hi I want 12 egg tarts and 2 bandung, paid by PayNow",

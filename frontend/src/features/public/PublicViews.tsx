@@ -48,7 +48,7 @@ import {
   X
 } from "lucide-react";
 import type { AppRoute, AuthCredential, AuthMode, AuthRole, InventoryProduct, ShopBranding } from "../../types";
-import { techArchitectureSteps, techSourceDocs, techStackHighlights, techStackSections, apiBase } from "../../constants";
+import { techArchitectureSteps, techSourceDocs, techStackHighlights, techStackSections, apiBase, demoCredentialCards } from "../../constants";
 import { BrandMark } from "../../components/BrandMark";
 import { ErrorNotice, PinInput } from "../../components/FormControls";
 import { ProductImageDisplay } from "../../components/ImagePreview";
@@ -877,6 +877,21 @@ function LoginView({
           ? "Signup creates regular user access only. Business and admin access still need to be added manually."
           : "Enter your username and 6-digit PIN. You will be routed to the right workspace."}
       </p>
+
+      {!isSignUp && demoCredentialCards.length ? (
+        <section className="demo-credentials" aria-label="Demo credentials">
+          <p className="section-label">demo logins</p>
+          <div className="demo-credentials-grid">
+            {demoCredentialCards.map((credential) => (
+              <div className="demo-credential-card" key={credential.label}>
+                <strong>{credential.label}</strong>
+                <span>Username: {credential.username}</span>
+                <span>PIN: {credential.pin}</span>
+              </div>
+            ))}
+          </div>
+        </section>
+      ) : null}
 
       <form className="auth-form" onSubmit={handleSubmit}>
         <div className="field-group">
