@@ -1578,28 +1578,57 @@ textarea:focus {
 
 .demo-credential-inline {
   margin: 0 0 14px;
-  padding: 0;
-  border: 0;
-  background: none;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
   color: var(--muted);
-  font: inherit;
   font-size: 0.84rem;
   line-height: 1.4;
-  text-align: left;
 }
 
-.demo-credential-inline strong {
+.demo-credential-prefix {
+  font-weight: 650;
+}
+
+.demo-credential-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.demo-credential-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: oklch(0.99 0.004 275);
+  color: var(--muted);
+  font: inherit;
+  font-size: 0.81rem;
+  line-height: 1.3;
+}
+
+.demo-credential-chip strong {
   color: var(--text);
   font-weight: 700;
 }
 
-.demo-credential-inline:hover,
-.demo-credential-inline:focus-visible {
+.demo-credential-label {
   color: var(--primary);
+  font-weight: 700;
+}
+
+.demo-credential-chip:hover,
+.demo-credential-chip:focus-visible {
+  color: var(--primary);
+  border-color: var(--primary);
   outline: none;
 }
 
-.demo-credential-inline:disabled {
+.demo-credential-chip:disabled {
   opacity: 0.64;
 }
 

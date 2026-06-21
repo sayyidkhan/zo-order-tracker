@@ -832,12 +832,13 @@ function LoginView({
     staleTime: 5 * 60 * 1000
   });
   const demoLoginCredentials = demoCredentialsQuery.data ?? [];
-  const demoCredential = loginTarget
-    ? demoLoginCredentials.find((credential) => {
-        const normalizedRole = credential.role.toLowerCase();
-        return loginTarget === "user" ? normalizedRole === "customer" : normalizedRole === "admin";
-      }) ?? null
-    : null;
+  const compactDemoCredentials = demoLoginCredentials
+    .map((credential) => {
+      const normalizedRole = credential.role.toLowerCase();
+      const label = normalizedRole === "customer" ? "User" : credential.role;
+      return { ...credential, label };
+    })
+    .sort((left, right) => left.label.localeCompare(right.label));
 
   useEffect(() => {
     setMode(initialMode);
@@ -914,16 +915,26 @@ function LoginView({
           : "Enter your username and 6-digit PIN. You will be routed to the right workspace."}
       </p>
 
-      {!isSignUp && demoCredential ? (
-        <button
-          className="demo-credential-inline"
-          type="button"
-          aria-label="Demo credentials"
-          onClick={() => applyDemoCredential(demoCredential)}
-          disabled={isPending}
-        >
-          Demo {loginTarget} login: <strong>{demoCredential.username}</strong> / <strong>{demoCredential.pin}</strong>
-        </button>
+      {!isSignUp && compactDemoCredentials.length > 0 ? (
+        <div className="demo-credential-inline" aria-label="Demo credentials">
+          <span className="demo-credential-prefix">Demo logins:</span>
+          <div className="demo-credential-list">
+            {compactDemoCredentials.map((credential) => (
+              <button
+                className="demo-credential-chip"
+                type="button"
+                key={credential.role}
+                onClick={() => applyDemoCredential(credential)}
+                disabled={isPending}
+              >
+                <span className="demo-credential-label">{credential.label}</span>
+                <strong>{credential.username}</strong>
+                <span>/</span>
+                <strong>{credential.pin}</strong>
+              </button>
+            ))}
+          </div>
+        </div>
       ) : null}
 
       <form className="auth-form" onSubmit={handleSubmit}>
