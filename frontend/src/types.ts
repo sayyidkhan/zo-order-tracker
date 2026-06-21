@@ -117,6 +117,9 @@ export type AuthCredential = {
   username: string;
   pin: string;
 };
+export type DemoLoginCredential = AuthCredential & {
+  role: "Customer" | "Admin";
+};
 export type AuthState = Record<AuthRole, AuthCredential | null>;
 export type ShopBranding = {
   business_name: string;
