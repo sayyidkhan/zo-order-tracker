@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 import { z } from "zod";
+import "./env.js";
 import { handleAgentMessage, handleWorkflowSetupMessage } from "./agent-chat.js";
 import { generateWorkflow, saveGeneratedWorkflow } from "./workflow-builder.js";
 import {
@@ -22,8 +22,6 @@ import { getAcceptedPaymentMethods, loadShopConfig, saveShopConfig } from "./sho
 import { createUser, findUserByCredentials, isDemoCredentialUser, normalizeUsername, updateUserPin } from "./user-store.js";
 import { formatProfileDisplayName, getUserProfile, saveUserProfile } from "./user-profile.js";
 import { loadWorkflow, processOrder, runWorkflow } from "./workflow-runner.js";
-
-dotenv.config();
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const workflowDir = path.resolve(__dirname, "..", "workflows");

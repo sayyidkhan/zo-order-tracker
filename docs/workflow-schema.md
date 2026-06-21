@@ -1,19 +1,10 @@
 # Workflow Schema
 
-Owner: Haoming
+zorder workflows are deterministic JSON decision trees. They are used for raw text processing, workflow testing, and setup tooling. Structured customer checkout does not depend on an LLM.
 
-This document defines the deterministic workflow contract for zorder. Runtime order processing should follow this contract before any optional AI setup flow is added.
-
-## Goals
-
-- Convert messy order text into structured order data.
-- Keep the logic predictable, explainable, and cheap to run.
-- Let a home business owner edit rules without understanding backend code.
-- Produce enough trace data for the dashboard to show why an input matched.
+The runtime schema file is `backend/workflows/workflow-schema.json`.
 
 ## Workflow Shape
-
-Each workflow is a JSON decision tree:
 
 ```json
 {
@@ -21,91 +12,118 @@ Each workflow is a JSON decision tree:
   "name": "Default Order Flow",
   "version": 1,
   "start": "detect_intent",
-  "states": {}
+  "states": {
+    "detect_intent": {
+      "type": "decision",
+      "rules": [],
+      "else": "needs_review"
+    },
+    "needs_review": {
+      "type": "action",
+      "action": "needs_review"
+    }
+  }
 }
 ```
 
-Required fields:
-
-| Field | Type | Notes |
+| Field | Required | Notes |
 | --- | --- | --- |
-| `id` | string | Stable workflow identifier. |
-| `name` | string | Human-readable name. |
-| `version` | number | Increment when workflow behavior changes. |
-| `start` | string | State id where execution begins. |
-| `states` | object | Map of state id to state definition. |
+| `id` | Yes | Stable workflow identifier. |
+| `name` | Yes | Human-readable name. |
+| `version` | Yes | Integer version. |
+| `start` | Yes | First state ID. |
+| `states` | Yes | Object keyed by state ID. |
 
-## State Types
+## Decision State
 
-### Decision State
-
-A decision state checks rules in order and jumps to the first matching `then` state.
+A decision state checks rules in order and moves to the first matching `then` state. If no rule matches, it moves to `else`.
 
 ```json
 {
   "type": "decision",
   "rules": [
     {
-      "id": "looks_like_order",
+      "id": "paid_order_request",
       "if": {
-        "containsAny": ["order", "want", "buy"]
+        "containsAny": ["paid", "paynow", "receipt"]
       },
-      "then": "extract_order"
+      "then": "create_order"
     }
   ],
   "else": "needs_review"
 }
 ```
 
-Supported condition operators for MVP:
+Supported condition operators:
 
 | Operator | Type | Behavior |
 | --- | --- | --- |
-| `containsAny` | string[] | Match if normalized input contains at least one phrase. |
-| `containsAll` | string[] | Match if normalized input contains every phrase. |
-| `matchesRegex` | string | Match if normalized input satisfies the regex. |
-| `amountDetected` | boolean | Match if input contains a currency amount. |
+| `containsAny` | `string[]` | Match when normalized input contains at least one phrase. |
+| `containsAll` | `string[]` | Match when normalized input contains every phrase. |
+| `matchesRegex` | `string` | Match JavaScript regex against normalized input. |
+| `amountDetected` | `boolean` | Match when input contains a currency-like amount. |
 
-Condition evaluation rules:
+Rules:
 
-- Normalize input to lowercase before matching.
-- Trim repeated whitespace.
-- Match `containsAny` and `containsAll` as plain phrases, not regex.
-- If multiple operators exist in one `if`, all operators must match.
-- Rules are ordered; first match wins.
+- Input is normalized to lowercase.
+- `containsAny` and `containsAll` are phrase checks, not regex.
+- If multiple operators exist in one condition, all must pass.
+- First matching rule wins.
 
-### Action State
+## Action State
 
-An action state produces an outcome for the backend.
+Action states end workflow execution.
 
 ```json
 {
   "type": "action",
-  "action": "create_order",
-  "payment_status": "paid"
+  "action": "ask_follow_up",
+  "message": "Ask for PayNow or bank transfer evidence before capturing this order.",
+  "required_fields": ["payment_evidence"]
 }
 ```
 
-Supported actions for MVP:
+Supported actions:
 
-| Action | Result |
+| Action | Meaning |
 | --- | --- |
-| `create_order` | Extract order fields and create a paid sales capture. |
-| `update_payment_status` | Mark a detected payment-only update as paid. |
-| `needs_review` | Store the input for manual review. |
-| `ask_follow_up` | Return a prompt for missing order details or payment evidence. |
+| `create_order` | Build an order result from the raw input. |
+| `update_payment_status` | Return a payment update result. Requires `payment_status`. |
+| `needs_review` | Return a review result. |
+| `ask_follow_up` | Return missing fields and prompt copy. |
 
-## Extraction Contract
+Supported `payment_status` values:
 
-The workflow runner should return a consistent response:
+- `paid`
+- `partial`
+- `unpaid`
+- `unknown`
+
+Supported `required_fields` values:
+
+- `customer_name`
+- `customer_handle`
+- `order_summary`
+- `items`
+- `total_amount`
+- `payment_status`
+- `payment_evidence`
+
+## Runner Output
+
+The runner returns traceable output for UI previews and tests.
 
 ```json
 {
   "workflow_id": "default-order-flow",
   "workflow_version": 1,
-  "matched_state": "extract_order",
-  "matched_rule": "looks_like_order",
+  "matched_state": "create_order",
+  "matched_rule": "paid_order_request",
   "action_taken": "create_order",
+  "status": "created",
+  "message": "Paid order captured.",
+  "explanation": "Matched paid_order_request.",
+  "trace": ["detect_intent", "create_order"],
   "order": {
     "customer_name": null,
     "customer_handle": null,
@@ -113,6 +131,7 @@ The workflow runner should return a consistent response:
     "source_input": "hi i want 12 egg tarts, paid by paynow",
     "order_summary": "12 egg tarts",
     "payment_status": "paid",
+    "fulfillment_status": "active",
     "total_amount": null,
     "currency": "SGD",
     "items": [
@@ -122,53 +141,42 @@ The workflow runner should return a consistent response:
         "unit_price": null,
         "notes": null
       }
-    ]
-  },
-  "explanation": "Matched looks_like_order because the input contained \"want\"."
+    ],
+    "evidence": "hi i want 12 egg tarts, paid by paynow",
+    "created_at": "2026-06-21T00:00:00.000Z"
+  }
 }
 ```
 
-Field requirements:
+## Runtime Rules
 
-| Field | Required | Notes |
+- Normal workflow execution must not call an LLM.
+- Missing payment proof should route to `ask_follow_up` rather than silently creating a paid order.
+- Ambiguous input should return `needs_review`.
+- Workflow JSON should be validated before use.
+- Published workflows are stored in `backend/workflows/{workflowId}.json`.
+
+## Current Endpoints
+
+| Endpoint | Role | Purpose |
 | --- | --- | --- |
-| `workflow_id` | yes | Id of the workflow used. |
-| `workflow_version` | yes | Version of the workflow used. |
-| `matched_state` | yes | Final state id. |
-| `matched_rule` | no | Rule id, if a decision rule matched. |
-| `action_taken` | yes | Final action. |
-| `order` | no | Present when action creates or updates an order. |
-| `explanation` | yes | Short deterministic explanation for the UI. |
+| `GET /workflows/schema` | Admin | Read JSON schema. |
+| `GET /workflows/:workflowId` | Admin | Read a workflow. |
+| `POST /workflows/run` | Admin | Test a workflow or saved workflow ID. |
+| `POST /workflows/generate` | Admin | Generate a draft workflow. |
+| `POST /workflows/publish` | Admin | Save workflow JSON. |
+| `POST /orders/process` | User | Process raw text and save only paid order results. |
+| `POST /agent/setup-workflow` | Admin | Guided setup wrapper around workflow generation. |
 
-## Payment Evidence Rules
+## Optional OpenAI Drafting
 
-For the MVP, saved sales captures should be paid only:
+By default, `workflow-builder.js` creates local deterministic drafts.
 
-- `paid`
-- `unknown` for ambiguous workflow previews or review-only results
+To explicitly use OpenAI for setup-only drafting:
 
-Recommended keyword hints:
+```env
+WORKFLOW_BUILDER_MODE=openai
+OPENAI_API_KEY=your_api_key_here
+```
 
-| Status | Hints |
-| --- | --- |
-| `paid` | paid, paynow, bank transfer, transferred, transfer done, sent receipt, receipt |
-| `unknown` | no payment hint found |
-
-Missing PayNow or bank-transfer evidence should route to `ask_follow_up` with `payment_evidence`, not create an unpaid order.
-
-## MVP Runner Algorithm
-
-1. Load the active workflow JSON.
-2. Validate it against `backend/workflows/workflow-schema.json`.
-3. Normalize the source input.
-4. Start at `workflow.start`.
-5. For decision states, evaluate rules in order and move to `then` or `else`.
-6. For action states, execute the named action and stop.
-7. Return the structured result and explanation.
-
-## Guardrails
-
-- Do not call an LLM inside the normal workflow runner.
-- Do not silently invent customer or payment details.
-- Do not let the workflow runner create invoices, product inventory records, or CRM-style profiles for MVP.
-- If the input is ambiguous, return `needs_review` or `ask_follow_up`.
+Daily order processing should still use the generated JSON deterministically.

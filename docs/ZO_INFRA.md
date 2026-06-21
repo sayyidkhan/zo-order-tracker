@@ -1,215 +1,123 @@
-# zorder Zo Infrastructure
+# Zo Infrastructure
 
-## Objective
+This document describes how zorder is currently deployed and what Zo is meant to represent in the demo story.
 
-Use Zo as more than a place to deploy code.
+## Current Deployment Shape
 
-For the Zo Build Challenge, zorder should show that Zo is:
+The repo deploys as one service:
 
-- the live demo host
-- the owner-controlled data home
-- the build-time AI assistant environment
-- the future automation runtime
-
-Runtime order tracking remains deterministic. Zo-assisted AI is used only to speed up building, setup, testing, and demo preparation.
-
-## Recommended MVP Infra
-
-```mermaid
-flowchart TD
-    Owner[Home business owner] --> Web[zorder web app on Zo]
-    Web --> API[Hono API]
-    API --> WF[JSON workflow runner]
-    API --> DB[(SQLite database)]
-    API --> Files[Workflow JSON files]
-    WF --> DB
-    Files --> WF
-
-    ZoAI[Zo agent / skills] -. setup only .-> Files
-    ZoAI -. seed demo data .-> DB
+```text
+Zo HTTP service
+  -> deployment/service-entrypoint.sh
+  -> node deploy-server.js
+  -> serves frontend/dist
+  -> proxies API routes to backend child process
+  -> backend/src/server.js Express API
+  -> backend/data/zorder.sqlite
 ```
 
-## Zo Hosting Choice
+The live URL in the README is:
 
-| Need | Zo Feature | How zorder uses it |
+```text
+https://zo-order-tracker-shab.zocomputer.io
+```
+
+## Runtime Components
+
+| Component | File | Purpose |
 | --- | --- | --- |
-| Public demo app | Zo Site or public HTTP Service | Host the zorder web app and API for submission. |
-| App data | Workspace files + SQLite | Keep the SQLite DB and workflow JSON inside the Zo environment. |
-| Custom backend runtime | Zo Service | Run Hono API if the app needs a long-running custom server. |
-| Background jobs later | Zo process Service or Automation | Run exports, backups, reminders, or future Telegram bot tasks. |
-| Build-time acceleration | Zo agent / skills | Generate workflow JSON, seed data, write test cases, and prepare demo material. |
+| Service entrypoint | `deployment/service-entrypoint.sh` | Installs dependencies and builds frontend when current commit is not built. |
+| Deploy server | `deploy-server.js` | Serves the frontend bundle and proxies API paths. |
+| Backend server | `backend/src/server.js` | Express API. |
+| Frontend build | `frontend/dist` | Static Vite build. |
+| Database | `backend/data/zorder.sqlite` | Local SQLite data store. |
+| Workflows | `backend/workflows/*.json` | Deterministic workflow JSON. |
 
-## Deployment Shape
+## API Proxy Paths
 
-For the hackathon MVP, prefer one deployable app:
+`deploy-server.js` proxies these prefixes to the backend:
 
-```text
-zorder app
-- Vite React frontend
-- TanStack Router
-- TanStack Query
-- Hono API
-- SQLite database file
-- JSON workflow files
-```
+- `/health`
+- `/auth`
+- `/orders`
+- `/inventory`
+- `/menu`
+- `/workflows`
+- `/agent`
+- `/config`
 
-If Zo Site supports the needed app shape cleanly, use a Zo Site. Zo docs describe Sites as full website projects hosted on the user's Zo server, with access to workspace files and SQLite as a default database option.
-
-If we need more runtime control, register a Zo HTTP Service. Zo docs describe Services as long-running programs for custom servers, databases, bots, sync loops, and background processes.
-
-## Runtime Architecture
-
-```mermaid
-flowchart LR
-    Browser[Browser] --> Router[TanStack Router]
-    Router --> Query[TanStack Query]
-    Query --> Hono[Hono API on Zo]
-    Hono --> Validate[Zod validation]
-    Validate --> Workflow[Deterministic JSON workflow runner]
-    Workflow --> Orders[(SQLite: orders)]
-    Workflow --> Runs[(SQLite: workflow_runs)]
-    Hono --> JSON[workflow_json files or DB table]
-```
-
-## File And Data Layout
-
-Recommended structure once implementation starts:
-
-```text
-apps/web
-- src/routes
-- src/components
-- src/lib/api
-
-apps/api
-- src/routes/orders.ts
-- src/workflows/runner.ts
-- src/workflows/schema.ts
-- src/db/schema.ts
-- src/db/client.ts
-
-data
-- zorder.sqlite
-
-workflows
-- default-order-flow.json
-- sample-home-bakery-flow.json
-```
-
-For the demo, SQLite is enough because:
-
-- the product is single-owner first
-- the dashboard needs simple order/payment state
-- SQLite is easy to inspect and explain
-- Zo Sites documentation points to SQLite as the default database choice for sites
+Everything else falls back to the SPA frontend.
 
 ## Environment Variables
 
-```text
+Backend/local:
+
+```env
+# Zo injects PORT for the public service. Leave it unset in `.env`.
+# PORT=<public service port or local port>
 NODE_ENV=production
-PORT=<injected by Zo service>
+ZORDER_BACKEND_PORT=4000
 DATABASE_URL=file:./data/zorder.sqlite
-ACTIVE_WORKFLOW_ID=default-order-flow
-ZORDER_USER_USERNAME=<set demo user username>
-ZORDER_USER_PIN=<set 6-digit user PIN>
-ZORDER_ADMIN_USERNAME=<set demo admin username>
-ZORDER_ADMIN_PIN=<set 6-digit admin PIN>
-AI_SETUP_ENABLED=false
-GPT_API_KEY=<optional, setup only>
-TELEGRAM_BOT_TOKEN=<future only>
-TELEGRAM_WEBHOOK_SECRET=<future only>
+ZORDER_USER_USERNAME=<demo user>
+ZORDER_USER_PIN=<6-digit user PIN>
+ZORDER_USER_EMAIL=<demo user email>
+ZORDER_ADMIN_USERNAME=<admin user>
+ZORDER_ADMIN_PIN=<6-digit admin PIN>
+WORKFLOW_BUILDER_MODE=local
+# OPENAI_API_KEY=<optional setup-only drafting>
 ```
 
 Rules:
 
-- `ZORDER_USER_USERNAME` and `ZORDER_USER_PIN` protect the `/user` surface and daily order-processing API calls.
-- `ZORDER_ADMIN_USERNAME` and `ZORDER_ADMIN_PIN` protect the `/admin` surface and workflow setup APIs.
-- `AI_SETUP_ENABLED` should default to `false`.
-- Runtime order processing must not require an AI key.
-- Telegram variables are reserved for the future integration path.
+- Zo/system env vars take precedence over the repo-root `.env`.
+- `backend/.env` is still read as a legacy fallback.
+- Keep deployment secrets in `.env` on Zo or in Zo env config, not in git.
+- Leave `VITE_API_BASE_URL` unset in deployment so API calls stay same-origin.
 
-## Zo Services Plan
+## Deployment Commands
 
-```mermaid
-flowchart TD
-    A[Hackathon MVP] --> B{Can Zo Site serve frontend + API cleanly?}
-    B -->|Yes| C[Use one Zo Site]
-    B -->|No| D[Use public HTTP Service for Hono app]
-    C --> E[SQLite + workflow JSON in workspace]
-    D --> E
-    E --> F[Publish live demo URL]
-    F --> G[Submission video shows Zo-hosted app]
+Full deploy:
+
+```bash
+npm run deploy:zo
 ```
 
-Future services:
+Useful variants:
 
-| Service | Mode | When Needed |
-| --- | --- | --- |
-| `zorder-web` | HTTP | Public web app and API. |
-| `zorder-worker` | Process | Backups, exports, scheduled cleanup. |
-| `zorder-telegram` | HTTP or Process | Telegram webhook or polling bot later. |
-
-## Future Telegram Infra
-
-Telegram is not part of the MVP, but the infra should leave a clear path.
-
-```mermaid
-flowchart TD
-    Telegram[Telegram Bot] --> Webhook[Zo HTTP Service: /api/telegram/webhook]
-    Webhook --> Normalize[Normalize Telegram update]
-    Normalize --> Workflow[Same JSON workflow runner]
-    Workflow --> DB[(SQLite/Postgres)]
-    DB --> Dashboard[zorder dashboard]
+```bash
+npm run deploy:zo -- --skip-pull
+npm run deploy:zo -- --skip-pull --allow-dirty
+npm run restart:service
+npm run health:service
 ```
 
-Design rule:
+Deployment flow:
 
-- Telegram should only become a new input source.
-- It must not fork the order processing logic.
-- It should reuse the same JSON workflow runner and order database.
+1. require clean worktree unless `--allow-dirty`
+2. fetch/pull current branch unless `--skip-pull`
+3. install backend/frontend dependencies
+4. build frontend
+5. write deployment build stamp
+6. restart Zo service
+7. run health check
 
-## Build-Time Use Of Zo AI
+## Zo Demo Narrative
 
-Use Zo AI where it compounds execution speed:
+For the hackathon narrative, Zo is not only a host:
 
-- generate starter workflow JSON from sample business rules
-- create demo data for a home bakery or preorder seller
-- draft validation test cases
-- summarize workflow behavior for the pitch deck
-- help prepare the 60-second submission video script
+- it hosts the live demo
+- it can keep the owner's SQLite data and workflow files close to the app
+- it provides a practical place for future automation jobs
+- it fits the story of a small owner-operated workflow system
 
-Do not use Zo AI for:
+Do not imply that Zo currently provides multi-tenant auth, payment verification, or messaging ingestion for zorder.
 
-- classifying every order at runtime
-- deciding payment evidence without deterministic rules
-- silently changing workflows without owner review
+## Future Infra Options
 
-## Demo Story
+Only consider these after the current app is stable:
 
-```text
-zorder is hosted on Zo.
-The owner's orders, SQLite database, and workflow JSON live in their Zo environment.
-Zo AI helps generate and test the workflow during setup.
-Daily order tracking runs through deterministic JSON rules, so it stays cheap and predictable.
-Telegram can later plug into the same workflow engine as an automation source.
-```
-
-## Operational Checklist
-
-- Live URL works on Zo.
-- Dashboard loads without local-only dependencies.
-- SQLite database is stored in the Zo workspace.
-- Workflow JSON can be opened and explained.
-- `/orders/process` works without an AI API key.
-- Demo data is seeded.
-- Submission video shows the Zo-hosted URL.
-- Future Telegram path is explained but not overbuilt.
-
-## References
-
-- Zo Computer: https://www.zo.computer/
-- Zo Hosting Options: https://zocomputer.mintlify.app/hosting
-- Zo Sites: https://zocomputer.mintlify.app/sites
-- Zo Services: https://zocomputer.mintlify.app/services
-- Zo Automations: https://zocomputer.mintlify.app/automations
-- Zo Subscription and Hosted Services: https://zocomputer.mintlify.app/billing
+- scheduled backups/exports
+- separate background worker service
+- production database migration
+- payment provider integration
+- messaging-channel ingestion that reuses the same workflow runner

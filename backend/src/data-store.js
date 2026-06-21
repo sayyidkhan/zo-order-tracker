@@ -3,8 +3,10 @@ import path from "node:path";
 import { randomUUID } from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { DatabaseSync } from "node:sqlite";
+import "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const backendDir = path.resolve(__dirname, "..");
 const dataDir = path.resolve(__dirname, "..", "data");
 const defaultDbPath = path.join(dataDir, "zorder.sqlite");
 const dbPath = resolveDatabasePath(process.env.DATABASE_URL ?? `file:${defaultDbPath}`);
@@ -340,10 +342,14 @@ function ensureOrdersColumn(columnName, columnType) {
 
 function resolveDatabasePath(databaseUrl) {
   if (databaseUrl.startsWith("file:")) {
-    return path.resolve(databaseUrl.replace(/^file:/, ""));
+    return resolveBackendPath(databaseUrl.replace(/^file:/, ""));
   }
 
-  return path.resolve(databaseUrl);
+  return resolveBackendPath(databaseUrl);
+}
+
+function resolveBackendPath(filePath) {
+  return path.isAbsolute(filePath) ? filePath : path.resolve(backendDir, filePath);
 }
 
 function nullableNumber(value) {

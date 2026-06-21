@@ -7,10 +7,13 @@ import { Hono } from "hono";
 import { createServer as createViteServer, type ViteDevServer } from "vite";
 import { serveStatic } from "hono/bun";
 import config from "./zosite.json";
+import { loadEnvFiles } from "./env-loader.js";
 
 type Mode = "development" | "production";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
+loadEnvFiles([resolve(__dirname, ".env"), resolve(__dirname, "backend/.env")]);
+
 const frontendDir = resolve(__dirname, "app", "frontend");
 const backendDir = resolve(__dirname, "app", "backend");
 const backendPort = Number(process.env.ZORDER_BACKEND_PORT ?? 4000);

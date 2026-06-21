@@ -5,9 +5,11 @@
   "scripts": {
     "clear-cache": "rm -rf node_modules/.vite frontend/dist",
     "install:app": "cd backend && npm install --include=dev --no-package-lock && cd ../frontend && npm install --include=dev --no-package-lock",
+    "setup:env": "cd backend && npm run setup:env",
     "build:frontend": "cd frontend && npm install --include=dev --no-package-lock && npm run build",
     "build": "npm run clear-cache && npm run build:frontend",
     "start": "bash deployment/service-entrypoint.sh",
+    "prod": "NODE_ENV=production bash deployment/service-entrypoint.sh",
     "dev": "bun run clear-cache && NODE_ENV=development bun run --hot server.ts",
     "deploy:zo": "bash deployment/deploy.sh",
     "reset:factory": "bash deployment/factory-reset.sh",

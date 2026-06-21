@@ -1,65 +1,125 @@
 # zorder
 
-A simple web-based order and payment tracker for home businesses.
+zorder helps a small merchant take paid orders without setting up a full ecommerce store.
 
-## App Structure
+Think of it as:
 
-- `frontend/` - Vite React web app.
-- `backend/` - Express API and deterministic JSON workflow runner.
-- `/intro` - product overview: business problem, solution, and how it works.
-- `/user` - customer ordering UI (menu, checkout, my orders).
-- `/admin` - admin UI for orders, order rules, inventory, and branding.
-- `/tech-stack` - public architecture and stack notes.
+- a simple menu page for customers
+- an admin page for the merchant
+- a place to collect PayNow or bank-transfer proof
+- a lightweight order list so the merchant knows what to prepare
 
-## Deployment Structure
+Live demo:
 
-This repo is set up for one-folder Zo deployment:
-
-- `frontend/` and `backend/` remain in this repository.
-- `deploy-server.js` at the repo root serves `frontend/dist` and proxies backend APIs.
-- The live URL is https://zo-order-tracker-shab.zocomputer.io.
-- Backend APIs are same-origin paths, not a separate public URL.
-
-## Prerequisites
-
-- Node.js 22.5+ for the backend SQLite runtime. Node 25 is tested locally.
-- npm or pnpm.
-
-## Setup
-
-Backend:
-
-```bash
-cd backend
-npm run setup:env
-npm install --no-package-lock
-npm run seed:users
-npm run seed:demo
-npm run dev
+```text
+https://zo-order-tracker-shab.zocomputer.io
 ```
 
-Frontend:
+## Who Should Read This
 
-```bash
-cd frontend
-cp .env.example .env
-npm install --no-package-lock
-npm run dev
+If you are the merchant using an already deployed zorder app, start at **Merchant Setup**.
+
+If you are the person deploying zorder to Zo, start at **One-Push Zo Deployment**.
+
+If you are an AI assistant helping with deployment, use the skill file:
+
+```text
+Skills/zo-order-tracker-deploy/SKILL.md
 ```
 
-Local URLs:
+That skill file tells future AI sessions how this repo should be deployed and what assumptions must stay true.
 
-- Intro: `http://127.0.0.1:5173/intro`
-- User app: `http://127.0.0.1:5173/user`
-- Admin app: `http://127.0.0.1:5173/admin`
-- Tech stack: `http://127.0.0.1:5173/tech-stack`
-- API health: `http://localhost:4000/health`
+## What The Merchant Needs Ready
 
-## Demo Auth
+Before setting up the shop, prepare:
 
-The MVP uses simple username + 6-digit PIN auth.
+- shop name
+- short tagline
+- payment instructions
+- PayNow number
+- PayNow QR image, if available
+- bank name, account name, and account number, if accepting bank transfer
+- product list with name, category, price, and active/inactive status
 
-Admin and the default demo user are configured in `backend/.env`:
+Example product list:
+
+| name | category | unit_price | active |
+| --- | --- | ---: | --- |
+| egg tarts | pastry | 2 | yes |
+| bandung | sweet drink | 3 | yes |
+| lemonade | sweet drink | 3 | yes |
+
+## Merchant Setup
+
+Use this after the app is already deployed.
+
+1. Open the admin page:
+
+```text
+https://zo-order-tracker-shab.zocomputer.io/admin
+```
+
+2. Sign in with the admin username and 6-digit PIN.
+
+Demo admin login:
+
+```text
+admin / 654321
+```
+
+3. Open **Branding**.
+
+Fill in:
+
+- shop name
+- shop tagline
+- shop description
+- payment instructions
+- PayNow number
+- PayNow QR
+- bank details
+
+4. Open **Inventory**.
+
+Add products manually, or upload a CSV/JSON product list.
+
+5. Open the customer page:
+
+```text
+https://zo-order-tracker-shab.zocomputer.io/user
+```
+
+6. Check that the customer sees the right shop name, menu, prices, and payment instructions.
+
+7. Share the `/user` link with customers.
+
+8. When customers place orders, review them from `/admin`.
+
+Important: zorder stores payment proof for the merchant to review. It does not confirm that the money really arrived in the bank or PayNow account.
+
+## Customer Flow
+
+Customers use zorder like this:
+
+1. Open `/user`.
+2. Sign in or sign up.
+3. Pick products from the menu.
+4. Pay outside the app by PayNow or bank transfer.
+5. Upload a screenshot, photo, or PDF of the payment proof.
+6. Place the order.
+7. Track active and completed orders from the customer page.
+
+Demo customer login:
+
+```text
+user / 123456
+```
+
+## Merchant Accounts
+
+The MVP uses simple username + 6-digit PIN login.
+
+The default customer and admin accounts are configured in the repo-root `.env` file:
 
 ```env
 ZORDER_USER_USERNAME=user
@@ -69,67 +129,15 @@ ZORDER_ADMIN_USERNAME=admin
 ZORDER_ADMIN_PIN=654321
 ```
 
-Use:
+Change these before any public demo.
 
-- `user` / `123456` for `/user`
-- `admin` / `654321` for `/admin`
+This login system is intentionally simple for MVP/demo use. It is not production-grade auth.
 
-Regular users can also self-sign up from `/login`. Signup creates role `user` only and stores the local demo account in:
+## Product Upload
 
-```text
-backend/data/users.json
-```
+The easiest way is to add products from **Admin → Inventory**.
 
-Business/admin access is not self-service. Add that manually through backend config or a future database migration.
-
-This is only a lightweight demo guard, not production auth.
-
-To create or update `backend/.env` without editing the file manually:
-
-```bash
-cd backend
-npm run setup:env
-```
-
-You can also pass values directly:
-
-```bash
-cd backend
-npm run setup:env -- --user-username=user --user-pin=123456 --admin-username=admin --admin-pin=654321 --gpt-api-key=your_api_key_here
-```
-
-To seed custom demo users:
-
-```bash
-cd backend
-npm run seed:users -- --user-username=user --user-pin=123456 --admin-username=admin --admin-pin=654321
-```
-
-To generate random local PINs:
-
-```bash
-cd backend
-npm run seed:users -- --random
-```
-
-## Demo Data And Inventory
-
-Orders and inventory products are stored in local SQLite:
-
-```text
-backend/data/zorder.sqlite
-```
-
-Seed the demo with egg tarts, bandung, lemonade, and sample orders:
-
-```bash
-cd backend
-npm run seed:demo
-```
-
-Admin users can add, edit, remove, or bulk upload inventory from `/admin?tab=inventory`.
-
-CSV upload format:
+For bulk upload, use CSV:
 
 ```csv
 name,category,unit_price,is_active
@@ -138,7 +146,7 @@ bandung,sweet drink,3,true
 lemonade,sweet drink,3,true
 ```
 
-JSON upload format:
+Or JSON:
 
 ```json
 {
@@ -150,48 +158,95 @@ JSON upload format:
 }
 ```
 
-## Optional AI Setup
+Only active products appear on the customer menu.
 
-Runtime order tracking is deterministic and does not require an AI key.
+## What zorder Does Not Do Yet
 
-AI is only used to generate starter workflow JSON in the admin setup flow. To enable it, set one of these in `backend/.env`:
+zorder does not currently:
 
-```env
-GPT-API-KEY=your_api_key_here
-# or
-OPENAI_API_KEY=your_api_key_here
+- verify PayNow or bank transfers automatically
+- process card payments
+- send WhatsApp or Telegram messages
+- manage delivery routes
+- provide production-grade multi-merchant auth
+
+It is currently best for demos, pilots, hackathons, and small owner-operated workflows.
+
+## One-Push Zo Deployment
+
+This section is for the person deploying the app to Zo.
+
+The goal: after the first setup, deployment should be:
+
+```text
+push code -> run one deploy command on Zo -> live app updates
 ```
 
-The default model is:
+There is no separate frontend upload. There is no separate backend deployment. Everything lives in this one repo.
 
-```env
-GPT_MODEL=gpt-5.5
+## One-Time Zo Setup
+
+Do this once on Zo after cloning the repo.
+
+1. Create the env file:
+
+```bash
+cp .env.example .env
+npm run setup:env
 ```
 
-## Zo Deployment
+2. Edit `.env` with real merchant login and payment values.
 
-The live Zo app is a managed long-running service.
+3. Keep these production rules:
 
-That means `git pull` by itself is not a deployment step. Pulling updates the files in the repo, but the public site can still serve the old frontend build and old server process until the service is rebuilt and restarted.
+- Do not set `PORT` in `.env`; Zo injects it.
+- Do not set `VITE_API_BASE_URL` in production; the frontend uses same-origin API paths.
+- Do not commit `.env`.
+- Use `npm run prod` as the Zo publish/start command.
 
-Use this command when you want new code to go live on Zo:
+`zosite.json` is already configured to use:
+
+```bash
+npm run prod
+```
+
+Environment loading order:
+
+1. Zo/system environment variables
+2. repo-root `.env`
+3. legacy `backend/.env`
+
+## Normal Deployment
+
+On your local machine:
+
+```bash
+git add .
+git commit -m "your change"
+git push
+```
+
+On Zo, from the repo root:
 
 ```bash
 npm run deploy:zo
 ```
 
-What it does:
+That one command:
 
-1. checks that the repo is clean
-2. fetches and fast-forwards the current branch
-3. installs dependencies
-4. rebuilds the frontend bundle
-5. restarts the running Zo service
-6. waits for the live health check to pass
+1. checks the Zo repo is clean
+2. pulls the latest pushed commit
+3. installs backend and frontend dependencies
+4. rebuilds the frontend
+5. restarts the live service
+6. checks `/api/health`
 
-Useful variants:
+If it passes, the public app is live.
+
+Useful deploy commands:
 
 ```bash
+npm run deploy:zo
 npm run deploy:zo -- --skip-pull
 npm run deploy:zo -- --skip-pull --allow-dirty
 npm run reset:factory -- --dry-run
@@ -200,7 +255,7 @@ npm run restart:service
 npm run health:service
 ```
 
-When to use them:
+Use `npm run deploy:zo` for normal production deploys.
 
 - `npm run deploy:zo` deploys the latest committed code from the remote branch
 - `npm run deploy:zo -- --skip-pull` deploys the code already checked out locally
@@ -210,9 +265,11 @@ When to use them:
 - `npm run restart:service` only restarts the live service
 - `npm run health:service` only checks the public health endpoint
 
-Deployment scripts live in `deployment/`.
-Deployment skill for future AI sessions: `Skills/zo-order-tracker-deploy/SKILL.md`.
-The production service startup path is `deployment/service-entrypoint.sh`, which reuses the existing build when the current commit is already built and rebuilds automatically when it is not.
+More deployment detail:
+
+```text
+DEPLOYMENT.md
+```
 
 ## Factory Reset
 
@@ -239,6 +296,7 @@ What the factory reset does:
 
 What it does not reset:
 
+- repo-root `.env`
 - `backend/.env`
 - API keys and secrets
 - deployment scripts and service configuration
@@ -251,20 +309,92 @@ npm run reset:factory -- --dry-run
 npm run reset:factory -- --yes --skip-restart
 ```
 
-Recommended Zo workflow:
+## Local Development
+
+This section is for developers.
+
+Requirements:
+
+- Node.js 22.5+ for the backend SQLite runtime
+- npm
+
+Create local env:
 
 ```bash
-git pull
-npm run deploy:zo
+cp .env.example .env
+npm run setup:env
 ```
 
-Or just run:
+Install dependencies:
 
 ```bash
-npm run deploy:zo
+npm run install:app
 ```
 
-if you want one command to both pull and deploy.
+Run backend:
+
+```bash
+cd backend
+npm run seed:users
+npm run seed:demo
+npm run dev
+```
+
+Run frontend in another terminal:
+
+```bash
+cd frontend
+npm run dev
+```
+
+Local pages:
+
+- Customer page: `http://127.0.0.1:5173/user`
+- Admin page: `http://127.0.0.1:5173/admin`
+- Product intro: `http://127.0.0.1:5173/intro`
+- Tech stack page: `http://127.0.0.1:5173/tech-stack`
+- Backend health: `http://localhost:4000/health`
+
+Local frontend development does not need `frontend/.env`. Vite proxies API paths to the backend on `localhost:4000`.
+
+## Optional AI Setup
+
+Runtime order tracking is deterministic and does not need an AI key.
+
+AI is only used to generate starter workflow JSON in the admin setup flow.
+
+To enable that optional setup helper, set:
+
+```env
+WORKFLOW_BUILDER_MODE=openai
+OPENAI_API_KEY=your_api_key_here
+```
+
+Optional overrides:
+
+```env
+# OPENAI_RESPONSES_URL=https://api.openai.com/v1/responses
+# GPT_MODEL=gpt-5.5
+```
+
+## Files Worth Knowing
+
+- `README.md` - this onboarding guide
+- `DEPLOYMENT.md` - detailed deployment guide
+- `Skills/zo-order-tracker-deploy/SKILL.md` - AI skill file for one-push deployment help
+- `.env.example` - template for merchant and deployment settings
+- `frontend/` - customer and admin web app
+- `backend/` - API, database, order workflow, shop config
+- `deployment/` - deploy, restart, health check, and service startup scripts
+- `deploy-server.js` - production web server
+- `zosite.json` - Zo publish configuration
+
+Useful docs:
+
+- `docs/SPEC.md`
+- `docs/USER_JOURNEY.md`
+- `docs/tech-stack.md`
+- `docs/ZO_INFRA.md`
 
 ## Useful Commands
 

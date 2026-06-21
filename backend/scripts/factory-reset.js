@@ -1,14 +1,15 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import dotenv from "dotenv";
+import { loadEnvFiles } from "../../env-loader.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(__dirname, "..");
 const repoRoot = path.resolve(backendDir, "..");
-const envPath = path.join(backendDir, ".env");
+const envPath = path.join(repoRoot, ".env");
+const legacyEnvPath = path.join(backendDir, ".env");
 
-dotenv.config({ path: envPath });
+loadEnvFiles([envPath, legacyEnvPath]);
 
 const args = parseArgs(process.argv.slice(2));
 const protectedWorkflowFiles = new Set(["default-order-flow.json", "workflow-schema.json"]);
@@ -67,6 +68,7 @@ for (const item of resetTargets) {
   console.log(`- reset ${item.label}: ${path.relative(repoRoot, item.target)}`);
 }
 console.log(`- preserve environment and secrets: ${path.relative(repoRoot, envPath)}`);
+console.log(`- preserve legacy backend env if present: ${path.relative(repoRoot, legacyEnvPath)}`);
 console.log(`- reseed demo products, sample orders, and default shop config`);
 
 if (args.dryRun) {
@@ -170,5 +172,5 @@ function timestampSlug() {
 
 function resolveDatabasePath(databaseUrl) {
   const rawPath = databaseUrl.startsWith("file:") ? databaseUrl.slice(5) : databaseUrl;
-  return path.resolve(backendDir, rawPath);
+  return path.isAbsolute(rawPath) ? rawPath : path.resolve(backendDir, rawPath);
 }

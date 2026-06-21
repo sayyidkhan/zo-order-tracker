@@ -1,41 +1,35 @@
-# Product
+# Product Brief
 
-## Register
+zorder is a simple storefront and paid-order tracker for small businesses.
 
-product
+It helps a merchant publish products, show payment instructions, capture payment proof, and track order fulfillment without adopting a full commerce stack.
 
 ## Users
 
-- **Merchants** configure products, order rules, branding, and review all orders in `/admin`.
-- **Customers** browse the menu, place orders, and track their own order history in `/user` after sign-in.
+| User | Need |
+| --- | --- |
+| Merchant/admin | Manage products, branding, payment details, orders, fulfillment, analytics, and workflow rules. |
+| Customer | Browse the menu, pay externally, upload proof, place an order, and track status. |
 
-## Product Purpose
+## Current Product Promise
 
-zorder connects merchant setup to a customer ordering flow. Merchants maintain inventory and deterministic workflow JSON. Customers sign in, pick items from the live menu, pay by PayNow or bank transfer, and place orders that appear in the merchant dashboard.
+- A customer can place a structured order from the live menu.
+- Payment proof is required before checkout creates an order.
+- A merchant can see all orders, payment evidence, and fulfillment status.
+- Inventory and storefront copy can change without code changes.
+- Runtime workflow logic is deterministic and does not require an AI key.
 
-Success means a customer can complete an order without CRM overhead, while the merchant still sees structured orders and payment status in one place.
+## Positioning
 
-## Brand Personality
+Not a CRM. Not a payment gateway. Not a generic AI chatbot.
 
-Practical, calm, trustworthy.
-
-The product should feel like a lightweight operations console for a small shop: organized, quick, and clear under pressure. It should not feel like enterprise CRM software or a generic AI chatbot.
-
-## Anti-references
-
-- Full CRM dashboards with crowded sales pipelines, lead scoring, and account-management language.
-- Decorative AI assistant interfaces where the model feels like the product instead of the setup helper.
-- Marketing-first SaaS landing pages that delay the actual order-tracking workflow.
-- Payment-gateway or invoice-heavy tools that imply capabilities outside the MVP.
+zorder is a lightweight operations layer for small sellers that already collect payment through PayNow or bank transfer.
 
 ## Design Principles
 
-- Lead with the task: the first screen is for processing and tracking orders, not explaining the product.
-- Keep the owner in control: always show extracted fields and the deterministic reason behind a match.
-- Stay lightweight: focus on paid order entry, payment evidence, and review flow.
-- Make states visible: paid captures, missing evidence, and needs review should be scannable at a glance.
-- Respect the team split: UI supports workflow generation and backend integration without hiding those contracts.
+- Lead with the task: ordering and operations come before marketing copy.
+- Keep status visible: paid, outstanding, needs review, active, completed.
+- Keep the merchant in control: products, branding, payments, and workflow rules are explicit.
+- Keep AI optional: AI can draft setup rules, but daily order handling stays deterministic.
 
-## Accessibility & Inclusion
-
-Target WCAG AA contrast and keyboard-accessible controls. Avoid color-only status communication by pairing colors with labels and icons. Respect reduced-motion preferences and keep motion short because users are in a task flow.
+See [SPEC.md](./SPEC.md) for the full product scope.
