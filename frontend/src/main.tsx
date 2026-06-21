@@ -246,6 +246,7 @@ const sampleMessages = [
 ];
 
 const workflowChatStorageKey = "zorder:workflow-builder:chat:v4";
+const workflowDraftStorageKey = "zorder:workflow-builder:draft:v1";
 const workflowSetupSteps: Array<{
   id: WorkflowSetupStepId;
   title: string;
@@ -445,7 +446,7 @@ function Workspace() {
   const [businessDescription, setBusinessDescription] = useStateValue(
     "Small Singapore dessert stall selling egg tarts and sweet drinks. Drinks are usually bandung or lemonade. Customers pay only by PayNow or bank transfer."
   );
-  const [generatedWorkflow, setGeneratedWorkflow] = useStateValue<WorkflowGeneration | null>(null);
+  const [generatedWorkflow, setGeneratedWorkflow] = useState<WorkflowGeneration | null>(loadGeneratedWorkflowDraft);
   const queryClient = useQueryClient();
   const orderAccess = getOrderAccess(auth);
   const ordersQuery = useQuery({
@@ -504,6 +505,10 @@ function Workspace() {
     },
     onSuccess: setGeneratedWorkflow
   });
+
+  useEffect(() => {
+    saveGeneratedWorkflowDraft(generatedWorkflow);
+  }, [generatedWorkflow]);
 
   const metrics = buildMetrics(orders);
   const shopConfigQuery = useQuery({
@@ -683,6 +688,7 @@ function Workspace() {
             metrics={metrics}
             shopBranding={shopBranding}
             onShopBrandingSaved={() => queryClient.invalidateQueries({ queryKey: ["shop-config"] })}
+            onWorkflowDraftCleared={() => setGeneratedWorkflow(null)}
           />
         ) : null}
       </section>
@@ -2278,7 +2284,8 @@ function AdminView({
   orders,
   metrics,
   shopBranding,
-  onShopBrandingSaved
+  onShopBrandingSaved,
+  onWorkflowDraftCleared
 }: {
   adminCredential: AuthCredential;
   businessDescription: string;
@@ -2289,6 +2296,7 @@ function AdminView({
   metrics: ReturnType<typeof buildMetrics>;
   shopBranding: ShopBranding;
   onShopBrandingSaved: () => void;
+  onWorkflowDraftCleared: () => void;
 }) {
   const [activeTab, setActiveTab] = useStateValue<AdminTab>(getInitialAdminTab());
   const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
@@ -2347,6 +2355,7 @@ function AdminView({
             generateMutation={generateMutation}
             generatedWorkflow={generatedWorkflow}
             shopBranding={shopBranding}
+            onWorkflowDraftCleared={onWorkflowDraftCleared}
           />
         ) : null}
 
@@ -2494,7 +2503,8 @@ function OrderRulesPanel({
   setBusinessDescription,
   generateMutation,
   generatedWorkflow,
-  shopBranding
+  shopBranding,
+  onWorkflowDraftCleared
 }: {
   adminCredential: AuthCredential;
   businessDescription: string;
@@ -2502,10 +2512,11 @@ function OrderRulesPanel({
   generateMutation: UseMutationResult<WorkflowGeneration, Error, WorkflowGenerateInput>;
   generatedWorkflow: WorkflowGeneration | null;
   shopBranding: ShopBranding;
+  onWorkflowDraftCleared: () => void;
 }) {
   const [builderPrompt, setBuilderPrompt] = useStateValue("");
   const [setupAnswers, setSetupAnswers] = useStateValue<WorkflowSetupAnswers>(createEmptyWorkflowSetupAnswers());
-  const [setupStepIndex, setSetupStepIndex] = useStateValue(0);
+  const [setupStepIndex, setSetupStepIndex] = useStateValue(generatedWorkflow ? workflowSetupSteps.length : 0);
   const [activeBuilderTab, setActiveBuilderTab] = useStateValue<WorkflowBuilderTab>("rules");
   const [publishNotice, setPublishNotice] = useStateValue<string | null>(null);
   const [chatMessages, setChatMessages] = useState<WorkflowChatMessage[]>(loadWorkflowChatHistory);
@@ -2627,7 +2638,9 @@ function OrderRulesPanel({
     setBuilderPrompt("");
     setSetupAnswers(createEmptyWorkflowSetupAnswers());
     setSetupStepIndex(0);
+    setPublishNotice(null);
     setChatMessages(createInitialWorkflowChatMessages());
+    onWorkflowDraftCleared();
   }
 
   function handleBuilderPromptKeyDown(event: React.KeyboardEvent<HTMLTextAreaElement>) {
@@ -5398,6 +5411,56 @@ function buildWorkflowSetupContext(answers: WorkflowSetupAnswers) {
     "If order content is present but uploaded payment proof is missing, ask for payment proof. Do not let merchants configure this policy.",
     "Build only explicit deterministic keyword, regex, amount, and branch rules."
   ].join(" ");
+}
+
+function loadGeneratedWorkflowDraft() {
+  const stored = localStorage.getItem(workflowDraftStorageKey);
+  if (!stored) {
+    return null;
+  }
+
+  try {
+    const parsed = JSON.parse(stored) as unknown;
+    if (isStoredWorkflowGeneration(parsed)) {
+      return parsed;
+    }
+  } catch {
+    localStorage.removeItem(workflowDraftStorageKey);
+  }
+
+  localStorage.removeItem(workflowDraftStorageKey);
+  return null;
+}
+
+function saveGeneratedWorkflowDraft(generatedWorkflow: WorkflowGeneration | null) {
+  if (!generatedWorkflow) {
+    localStorage.removeItem(workflowDraftStorageKey);
+    return;
+  }
+
+  localStorage.setItem(workflowDraftStorageKey, JSON.stringify(generatedWorkflow));
+}
+
+function isStoredWorkflowGeneration(value: unknown): value is WorkflowGeneration {
+  if (!value || typeof value !== "object") {
+    return false;
+  }
+
+  const candidate = value as Partial<WorkflowGeneration>;
+  const workflow = candidate.workflow;
+
+  return Boolean(
+    workflow &&
+      typeof workflow === "object" &&
+      typeof workflow.id === "string" &&
+      typeof workflow.name === "string" &&
+      typeof workflow.version === "number" &&
+      typeof workflow.start === "string" &&
+      workflow.states &&
+      typeof workflow.states === "object" &&
+      Array.isArray(candidate.test_inputs) &&
+      Array.isArray(candidate.rule_explanations)
+  );
 }
 
 function loadWorkflowChatHistory() {
