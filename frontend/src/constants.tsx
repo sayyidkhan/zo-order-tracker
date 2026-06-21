@@ -15,7 +15,6 @@ import {
   FileText,
   FileJson,
   GitBranch,
-  Globe2,
   KeyRound,
   Layers3,
   Loader2,
@@ -46,7 +45,8 @@ import {
 } from "lucide-react";
 import type { AuthRole, ShopBranding, TechStackSection, WorkflowSetupStepId } from "./types";
 
-export const apiBase = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:4000";
+const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim();
+export const apiBase = configuredApiBase ? configuredApiBase.replace(/\/$/, "") : "";
 
 export const sampleMessages = [
   "Hi I want 12 egg tarts and 2 bandung, paid by PayNow",
@@ -116,125 +116,131 @@ export const defaultShopBranding: ShopBranding = {
 };
 
 export const techStackHighlights = [
-  "Web-first MVP before Telegram automation.",
-  "Deterministic JSON workflows for daily order processing.",
-  "AI is setup assistance only, not the runtime engine.",
-  "Zo is the demo host, data home, and future automation runtime."
+  "Structured customer checkout is the primary order path.",
+  "SQLite stores products, orders, order items, and shop config.",
+  "Workflow JSON stays deterministic; OpenAI drafting is optional.",
+  "Zo serves the built frontend and proxies the Express API."
 ];
 
 export const techArchitectureSteps = [
   "Vite React web app",
-  "URL routes",
+  "Pathname routes",
   "TanStack Query",
-  "API server",
+  "Express API",
   "Zod validation",
-  "JSON workflow runner",
-  "SQLite + workflow files"
+  "SQLite data store",
+  "JSON workflows"
 ];
 
-export const techSourceDocs = ["docs/tech-stack.md", "docs/ZO_INFRA.md", "docs/USER_JOURNEY.md", "docs/workflow-schema.md"];
+export const techSourceDocs = [
+  "docs/SPEC.md",
+  "docs/tech-stack.md",
+  "docs/ZO_INFRA.md",
+  "docs/USER_JOURNEY.md",
+  "docs/workflow-schema.md"
+];
 export const maxPaymentProofPayloadLength = 1_450_000;
 export const maxProductImagePayloadLength = 850_000;
 
 export const techStackSections: TechStackSection[] = [
   {
     title: "MVP Code Path",
-    description: "What the current prototype depends on while keeping the docs' target architecture visible.",
+    description: "What the current app actually runs today.",
     items: [
       {
         icon: <Code2 size={20} />,
         label: "Frontend",
         choice: "Vite + React + TypeScript",
-        detail: "Fast SPA for the owner dashboard, admin workspace, intro, and public stack notes.",
+        detail: "SPA for the storefront, customer workspace, admin workspace, intro, and public notes.",
         status: "Live"
       },
       {
         icon: <Route size={20} />,
         label: "Routing",
-        choice: "Pathname routes, TanStack Router target",
-        detail: "Docs choose TanStack Router for type-safe routing; the MVP currently uses a small URL router.",
-        status: "Target"
+        choice: "Lightweight pathname routing",
+        detail: "A small local route helper maps URLs such as /user, /admin, /intro, and /tech-stack.",
+        status: "Live"
       },
       {
         icon: <GitBranch size={20} />,
         label: "Server state",
         choice: "TanStack Query",
-        detail: "Order processing and workflow generation run as mutations with loading and error states.",
+        detail: "Shop config, orders, inventory, profiles, menus, and workflow calls use query/mutation state.",
         status: "Live"
       },
       {
         icon: <Server size={20} />,
         label: "API runtime",
-        choice: "Express now, Hono target",
-        detail: "The backend exposes auth, workflow, agent, and order APIs; docs keep Hono as the lightweight target.",
+        choice: "Express",
+        detail: "The backend exposes auth, shop config, menu, orders, inventory, workflow, and agent endpoints.",
         status: "Live"
       }
     ]
   },
   {
-    title: "Deterministic Operations",
-    description: "The product promise is a cheap, predictable order system instead of a generic AI chatbot.",
+    title: "Operations Data Path",
+    description: "How orders, products, payment proof, and workflow rules stay inspectable.",
     items: [
       {
         icon: <FileJson size={20} />,
         label: "Workflow engine",
         choice: "Deterministic JSON decision tree",
-        detail: "Rules match messy order text, return a trace, and explain why an input matched.",
+        detail: "Rules match raw order text, return a trace, and explain why an input matched.",
         status: "Live"
       },
       {
         icon: <ShieldCheck size={20} />,
         label: "Validation and auth",
         choice: "Zod + role PIN credentials",
-        detail: "MVP guards /user and /admin with demo credentials and validates API payloads.",
+        detail: "MVP guards customer and admin APIs with username/PIN credentials and validates payloads.",
         status: "Live"
       },
       {
         icon: <Database size={20} />,
         label: "Data",
-        choice: "SQLite now, Drizzle target",
-        detail: "Orders and uploaded inventory are stored locally in SQLite, with Postgres reserved for scale.",
+        choice: "Node sqlite + JSON files",
+        detail: "SQLite stores products, orders, order items, and shop config; JSON stores users and workflows.",
         status: "Live"
       },
       {
         icon: <Bot size={20} />,
         label: "AI assistance",
-        choice: "Setup-only workflow generator",
-        detail: "AI can draft workflow JSON from seller notes, but daily processing stays deterministic.",
+        choice: "Local generator by default",
+        detail: "OpenAI can draft workflow JSON only when explicitly enabled for setup.",
         status: "Live"
       }
     ]
   },
   {
-    title: "Zo And Expansion Path",
-    description: "The architecture notes position Zo as part of the product story, not only a deployment checkbox.",
+    title: "Zo Deployment Path",
+    description: "How the current app is packaged and where it can scale later.",
     items: [
       {
         icon: <Cloud size={20} />,
         label: "Hosting",
-        choice: "Zo Computer first",
-        detail: "Use Zo as the public demo host and the always-on place for the app runtime.",
-        status: "Target"
+        choice: "Zo HTTP service",
+        detail: "The service runs deploy-server.js, serves frontend/dist, and proxies API routes to Express.",
+        status: "Live"
       },
       {
         icon: <Layers3 size={20} />,
-        label: "Owner data home",
-        choice: "Zo workspace files + SQLite",
-        detail: "Orders, workflow JSON, and demo data should live in the owner's Zo environment.",
-        status: "Target"
+        label: "App package",
+        choice: "One repo, two app folders",
+        detail: "frontend/ and backend/ stay together so deployment can build and run one service.",
+        status: "Live"
       },
       {
-        icon: <Globe2 size={20} />,
-        label: "Telegram",
-        choice: "Future webhook input",
-        detail: "Telegram should become another source channel that reuses the same workflow runner.",
-        status: "Later"
+        icon: <Database size={20} />,
+        label: "Demo data",
+        choice: "SQLite in backend/data",
+        detail: "Local demo data is easy to seed, inspect, back up, and explain during the hackathon.",
+        status: "Live"
       },
       {
         icon: <Cpu size={20} />,
-        label: "Future data",
-        choice: "Postgres after MVP",
-        detail: "Move beyond SQLite only when multi-user persistence or production hosting requires it.",
+        label: "Future scale",
+        choice: "Production DB and workers later",
+        detail: "Move beyond SQLite only when tenant separation, exports, or background jobs require it.",
         status: "Later"
       }
     ]

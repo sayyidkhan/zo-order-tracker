@@ -1,83 +1,87 @@
-# zorder User Journey
+# User Journey
 
-## Surfaces
+zorder has two working app surfaces:
 
-The MVP is a web app with two roles:
+- `/user` for customers
+- `/admin` for merchants/admins
 
-- `/admin` — merchant setup and operations.
-- `/user` — customer ordering after sign-in.
+Both use username + 6-digit PIN auth in the MVP. Public visitors can also view `/intro`, `/tech-stack`, and `/why-zo-computer`.
 
-Both surfaces use username + 6-digit PIN auth for the demo. Signup creates role `user` only.
-
-## Merchant Journey (`/admin`)
-
-The merchant configures the shop before customers can order.
-
-| Tab | Purpose |
-| --- | --- |
-| Orders | Review all incoming orders and payment status |
-| Order Rules | Generate and publish deterministic JSON workflows |
-| Inventory | Maintain the product catalog shown on the customer menu |
-| Branding | Storefront name, tagline, description, and payment instructions |
-
-### Setup sequence
-
-1. Add products in **Inventory → Products** (name, category, price, active flag).
-2. Generate workflow rules in **Order Rules** from business context.
-3. Publish the workflow from **Live Draft**.
-4. Save **Branding**, including PayNow / bank transfer instructions.
-
-Published products feed `GET /menu`. Published branding feeds the `/user` landing page and checkout copy.
-
-## Customer Journey (`/user`)
-
-Everything before login stays on the branded landing page. After login, the customer flow is:
+## Customer Journey
 
 ```mermaid
 flowchart TD
-    A[Sign in] --> B[Menu]
-    B --> C[Add items to cart]
-    C --> D[Checkout]
-    D --> E[Enter payment reference]
-    E --> F[Place order]
-    F --> G[My orders]
+    A[Open /user] --> B[View branded storefront]
+    B --> C[Sign in or sign up]
+    C --> D[Choose order method]
+    D --> E[Browse menu or guided ordering]
+    E --> F[Add products to cart]
+    F --> G[Review checkout]
+    G --> H[Pay outside zorder]
+    H --> I[Upload payment proof]
+    I --> J[Place order]
+    J --> K[Track active/completed order]
 ```
 
-### Customer tabs (post-login)
+### Customer Pages
 
-| Tab | Action |
+| Area | Current Behavior |
 | --- | --- |
-| Menu | Browse products and add items to cart |
-| Checkout | Review cart, enter payment details, and place order |
-| My orders | See only orders placed by the signed-in customer |
-| Profile | Save name, email, contact details, and change PIN |
+| Storefront landing | Uses merchant branding, tagline, description, payment methods, and menu preview. |
+| Login/signup | Username + 6-digit PIN. Signup creates a customer user only. |
+| Menu | Shows active products grouped by category. |
+| Guided order | Chatbot-style UI that guides product, quantity, payment, and completion. |
+| Checkout | Shows cart, notes, payment instructions, payment proof upload, and place order button. |
+| My orders | Splits active orders and history. |
+| Profile | Saves required profile fields and lets non-demo users change PIN. |
 
-The workspace header shows **Welcome back, {name}** using the saved profile name, falling back to the username when profile details are empty.
+### Payment Rule
 
-### API contract
+Structured checkout requires an uploaded payment proof image before `/orders/place` accepts the order.
 
-| Endpoint | Role | Notes |
-| --- | --- | --- |
-| `GET /menu` | user | Active products from merchant inventory |
-| `POST /orders/place` | user | Structured cart placement |
-| `GET /orders` | user | Scoped to `placed_by_username` |
-| `GET /orders` | admin | All orders |
-| `GET /config/shop` | public | Branding + payment instructions |
-| `POST /workflows/publish` | admin | Activates generated workflow JSON |
+zorder does not verify payment through a bank or gateway. It stores the proof for merchant review and marks the structured checkout order as paid when valid proof is uploaded.
 
-### Payment rules
+## Merchant Journey
 
-- Accepted methods: PayNow and bank transfer (configured in branding copy).
-- Orders save immediately with status `paid`, `unpaid`, or `unknown` based on the payment reference text.
-- Merchant sees the same orders in **Admin → Orders** and sales analytics under **Inventory**.
+```mermaid
+flowchart TD
+    A[Open /admin] --> B[Sign in]
+    B --> C[Manage inventory]
+    C --> D[Configure branding and payment details]
+    D --> E[Review orders]
+    E --> F[Complete fulfilled orders]
+    B --> G[Review or test order rules]
+```
+
+### Admin Tabs
+
+| Tab | Current Behavior |
+| --- | --- |
+| Orders | Shows all orders, payment status, proof, fulfillment state, and PDF download. |
+| Order Rules | Shows deterministic customer order flow and workflow tooling. |
+| Inventory | Adds/edits/deletes products, uploads product images, bulk imports CSV/JSON, and shows analytics. |
+| Branding | Saves storefront copy, PayNow details, generated/uploaded QR, bank details, and footer note. |
+
+## Current API Contracts
+
+| Flow | Endpoint |
+| --- | --- |
+| Public shop config | `GET /config/shop` |
+| Public menu preview | `GET /menu/preview` |
+| Customer menu | `GET /menu` |
+| Structured checkout | `POST /orders/place` |
+| Customer/admin order list | `GET /orders` |
+| Complete order | `PATCH /orders/:orderId/complete` |
+| Inventory snapshot | `GET /inventory` |
+| Branding save | `PUT /config/shop` |
+| Workflow test | `POST /workflows/run` |
+| Workflow generate | `POST /workflows/generate` |
+| Workflow publish | `POST /workflows/publish` |
 
 ## Critical UX Rules
 
-- Customer menu only shows **active** products from merchant inventory.
-- Customer order history is **scoped to the signed-in username**.
-- Merchant workflow JSON remains deterministic; customer placement still runs through the same runner for auditability.
-- Do not expose admin inventory editing or workflow builder on the customer side.
-
-## Future
-
-Telegram and other channels can reuse the same workflow runner and product catalog. The customer web flow is the reference implementation for structured ordering.
+- Customer menu must only show active products.
+- Customer order history must be scoped to the signed-in username.
+- Payment proof must be visible to the merchant.
+- Admin tools must not appear in the customer surface.
+- Workflow testing can explain rule behavior, but normal structured checkout should remain simple.

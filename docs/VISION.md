@@ -1,39 +1,42 @@
 # zorder Vision
 
-## Problem
+## Direction
 
-- Orders are messy and hard to track.
-- Payment tracking is manual.
-- Many small business owners still track orders and payments manually.
+zorder should become the lightweight operating system for small sellers who start with informal ordering but need more structure before they are ready for a full commerce platform.
 
-## Solution
+The product should compound from:
 
-zorder is a simple web-based paid order capture tracker for home businesses.
+1. structured customer ordering
+2. payment proof capture
+3. order and fulfillment tracking
+4. sales visibility
+5. optional automation channels
 
-Tagline: Turn messy paid orders into a clear sales capture dashboard.
+## Current Wedge
 
-## Free Version
+Start with the web storefront because it is controllable, demoable, and removes immediate ordering friction:
 
-- Owner enters or imports order details into the web app.
-- zorder applies a deterministic workflow to classify paid order captures and missing payment evidence.
-- Zo powers the backend.
-- Owner sees a simple dated sales capture dashboard.
+- merchant publishes a product menu
+- customer places an order
+- customer uploads proof of external payment
+- merchant tracks fulfillment
 
-## Premium Version
+## Strategic Bet
 
-- Owner connects a supported messaging channel such as Telegram.
-- Orders are captured automatically.
-- Messaging platform costs are paid by the owner, not by Zo.
+Small sellers do not need a generic AI assistant first. They need a reliable operating workflow. AI is useful when it helps configure or improve that workflow, not when it adds runtime uncertainty to every order.
 
-## Positioning
+## Product Principles
 
-Not a CRM. Just a simple paid order capture tracker for home businesses.
+- Deterministic by default.
+- Simple enough for one owner to operate.
+- Data belongs close to the owner.
+- Add automation only after the manual workflow is clear.
+- Keep the path open for future channels, but do not overbuild before demand.
 
-## MVP Scope
+## Roadmap Themes
 
-Build only:
-
-- Enter or import order details.
-- Classify paid captures and evidence follow-up with JSON workflows.
-- Track paid orders by capture date.
-- Simple sales dashboard.
+- Better merchant order editing and review.
+- Better reporting and exports.
+- Production auth and merchant account separation.
+- Optional setup-only AI improvements.
+- Future message-channel ingestion that reuses the same workflow runner.

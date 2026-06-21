@@ -2,6 +2,13 @@
 
 A simple web-based order and payment tracker for home businesses.
 
+## Docs
+
+- Canonical spec: [`docs/SPEC.md`](docs/SPEC.md)
+- Docs index: [`docs/README.md`](docs/README.md)
+- Current stack: [`docs/tech-stack.md`](docs/tech-stack.md)
+- Deployment notes: [`docs/ZO_INFRA.md`](docs/ZO_INFRA.md)
+
 ## App Structure
 
 - `frontend/` - Vite React web app.
@@ -27,11 +34,17 @@ This repo is set up for one-folder Zo deployment:
 
 ## Setup
 
+Create the repo-level env file:
+
+```bash
+cp .env.example .env
+npm run setup:env
+```
+
 Backend:
 
 ```bash
 cd backend
-npm run setup:env
 npm install --no-package-lock
 npm run seed:users
 npm run seed:demo
@@ -42,7 +55,6 @@ Frontend:
 
 ```bash
 cd frontend
-cp .env.example .env
 npm install --no-package-lock
 npm run dev
 ```
@@ -59,7 +71,7 @@ Local URLs:
 
 The MVP uses simple username + 6-digit PIN auth.
 
-Admin and the default demo user are configured in `backend/.env`:
+Admin and the default demo user are configured in the repo-root `.env`:
 
 ```env
 ZORDER_USER_USERNAME=user
@@ -84,18 +96,16 @@ Business/admin access is not self-service. Add that manually through backend con
 
 This is only a lightweight demo guard, not production auth.
 
-To create or update `backend/.env` without editing the file manually:
+To create or update `.env` without editing the file manually:
 
 ```bash
-cd backend
 npm run setup:env
 ```
 
 You can also pass values directly:
 
 ```bash
-cd backend
-npm run setup:env -- --user-username=user --user-pin=123456 --admin-username=admin --admin-pin=654321 --gpt-api-key=your_api_key_here
+npm run setup:env -- --user-username=user --user-pin=123456 --admin-username=admin --admin-pin=654321
 ```
 
 To seed custom demo users:
@@ -154,7 +164,7 @@ JSON upload format:
 
 Runtime order tracking is deterministic and does not require an AI key.
 
-AI is only used to generate starter workflow JSON in the admin setup flow. To enable it, set these in `backend/.env`:
+AI is only used to generate starter workflow JSON in the admin setup flow. To enable it, set these in `.env`:
 
 ```env
 WORKFLOW_BUILDER_MODE=openai
@@ -171,6 +181,13 @@ The code has defaults for the Responses endpoint and model. Override them only w
 ## Zo Deployment
 
 The live Zo app is a managed long-running service.
+
+Environment loading is centralized:
+
+- Zo/system environment variables win.
+- Repo-root `.env` is the canonical file.
+- `backend/.env` is still read as a legacy fallback.
+- The frontend uses same-origin API paths by default, so production does not need `frontend/.env`.
 
 That means `git pull` by itself is not a deployment step. Pulling updates the files in the repo, but the public site can still serve the old frontend build and old server process until the service is rebuilt and restarted.
 

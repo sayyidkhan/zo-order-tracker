@@ -17,11 +17,11 @@ npm run deploy:zo
 That command will:
 
 1. verify the repo is clean
-2. fetch and fast-forward `main`
+2. fetch and fast-forward the current branch
 3. install dependencies
 4. build the frontend
 5. restart the running Zo service
-6. wait for `https://zo-order-tracker-shab.zocomputer.io/api/health`
+6. wait for the public health check from `deployment/health-check.sh`
 
 ## Useful Variants
 
