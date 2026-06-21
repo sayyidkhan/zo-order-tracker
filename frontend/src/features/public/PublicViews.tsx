@@ -781,12 +781,14 @@ export function LoginPage({
   shopBranding,
   initialMode,
   onAuthenticated,
-  onBack
+  onBack,
+  loginTarget
 }: {
   shopBranding: ShopBranding;
   initialMode: AuthMode;
   onAuthenticated: (role: AuthRole, credential: AuthCredential) => void;
   onBack: () => void;
+  loginTarget: AuthRole | null;
 }) {
   return (
     <div className="login-page">
@@ -799,17 +801,19 @@ export function LoginPage({
         <ArrowLeft size={16} />
         Back
       </button>
-      <LoginView initialMode={initialMode} onAuthenticated={onAuthenticated} onBack={onBack} />
+      <LoginView initialMode={initialMode} loginTarget={loginTarget} onAuthenticated={onAuthenticated} onBack={onBack} />
     </div>
   );
 }
 
 function LoginView({
   initialMode,
+  loginTarget,
   onAuthenticated,
   onBack
 }: {
   initialMode: AuthMode;
+  loginTarget: AuthRole | null;
   onAuthenticated: (role: AuthRole, credential: AuthCredential) => void;
   onBack: () => void;
 }) {
@@ -828,6 +832,12 @@ function LoginView({
     staleTime: 5 * 60 * 1000
   });
   const demoLoginCredentials = demoCredentialsQuery.data ?? [];
+  const demoCredential = loginTarget
+    ? demoLoginCredentials.find((credential) => {
+        const normalizedRole = credential.role.toLowerCase();
+        return loginTarget === "user" ? normalizedRole === "customer" : normalizedRole === "admin";
+      }) ?? null
+    : null;
 
   useEffect(() => {
     setMode(initialMode);
@@ -904,27 +914,16 @@ function LoginView({
           : "Enter your username and 6-digit PIN. You will be routed to the right workspace."}
       </p>
 
-      {!isSignUp && demoLoginCredentials.length > 0 ? (
-        <div className="demo-login-hints" aria-label="Demo login credentials">
-          <p className="demo-login-heading">Demo credentials</p>
-          <div className="demo-login-list">
-            {demoLoginCredentials.map((credential) => (
-              <button
-                className="demo-login-option"
-                type="button"
-                key={credential.role}
-                onClick={() => applyDemoCredential(credential)}
-                disabled={isPending}
-              >
-                <span className="demo-login-role">{credential.role}</span>
-                <span className="demo-login-values">
-                  <span>Username: {credential.username}</span>
-                  <span>PIN: {credential.pin}</span>
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
+      {!isSignUp && demoCredential ? (
+        <button
+          className="demo-credential-inline"
+          type="button"
+          aria-label="Demo credentials"
+          onClick={() => applyDemoCredential(demoCredential)}
+          disabled={isPending}
+        >
+          Demo {loginTarget} login: <strong>{demoCredential.username}</strong> / <strong>{demoCredential.pin}</strong>
+        </button>
       ) : null}
 
       <form className="auth-form" onSubmit={handleSubmit}>

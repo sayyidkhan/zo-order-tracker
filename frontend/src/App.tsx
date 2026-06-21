@@ -36,6 +36,10 @@ export default function App() {
 function Workspace() {
   const [activeRoute, setActiveRoute] = useStateValue<AppRoute>(getInitialRoute());
   const [loginMode, setLoginMode] = useStateValue<AuthMode>(getAuthModeFromUrl());
+  const [loginTarget, setLoginTarget] = useState<"user" | "admin" | null>(() => {
+    const role = new URLSearchParams(window.location.search).get("role");
+    return role === "admin" || role === "user" ? role : null;
+  });
   const [auth, setAuth] = useState<AuthState>(loadAuthState);
   const queryClient = useQueryClient();
   const orderAccess = getOrderAccess(auth);
@@ -65,16 +69,19 @@ function Workspace() {
     const handlePopState = () => {
       setActiveRoute(getInitialRoute());
       setLoginMode(getAuthModeFromUrl());
+      const role = new URLSearchParams(window.location.search).get("role");
+      setLoginTarget(role === "admin" || role === "user" ? role : null);
     };
     window.addEventListener("popstate", handlePopState);
     return () => window.removeEventListener("popstate", handlePopState);
-  }, [setActiveRoute, setLoginMode]);
+  }, [setActiveRoute, setLoginMode, setLoginTarget]);
 
   useLayoutEffect(() => {
     const path = window.location.pathname;
     if (path.startsWith("/user/login")) {
-      window.history.replaceState({}, "", "/login");
+      window.history.replaceState({}, "", "/login?role=user");
       setActiveRoute("login");
+      setLoginTarget("user");
       return;
     }
 
@@ -90,19 +97,25 @@ function Workspace() {
     }
 
     if (activeRoute === "admin" && !auth.admin) {
-      window.history.replaceState({}, "", "/login");
+      window.history.replaceState({}, "", "/login?role=admin");
       setActiveRoute("login");
+      setLoginTarget("admin");
     }
-  }, [activeRoute, auth.admin, auth.user, setActiveRoute]);
+  }, [activeRoute, auth.admin, auth.user, setActiveRoute, setLoginTarget]);
 
   function navigateToRoute(route: AppRoute) {
     window.history.pushState({}, "", routePath(route));
     setActiveRoute(route);
   }
 
-  function navigateToLogin(mode: AuthMode = "sign-in") {
+  function navigateToLogin(mode: AuthMode = "sign-in", target: "user" | "admin" | null = null) {
     setLoginMode(mode);
-    window.history.pushState({}, "", mode === "sign-up" ? "/login?mode=sign-up" : "/login");
+    setLoginTarget(target);
+    const params = new URLSearchParams();
+    if (mode === "sign-up") params.set("mode", "sign-up");
+    if (target) params.set("role", target);
+    const query = params.toString();
+    window.history.pushState({}, "", query ? `/login?${query}` : "/login");
     setActiveRoute("login");
   }
 
@@ -158,6 +171,7 @@ function Workspace() {
           <LoginPage
             shopBranding={shopBranding}
             initialMode={loginMode}
+            loginTarget={loginTarget}
             onAuthenticated={authenticate}
             onBack={() => navigateToRoute("user")}
           />
@@ -173,8 +187,8 @@ function Workspace() {
           <PublicPageTopbar onNavigate={navigateToRoute} />
           <UserShopLanding
             shopBranding={shopBranding}
-            onSignIn={() => navigateToLogin("sign-in")}
-            onSignUp={() => navigateToLogin("sign-up")}
+            onSignIn={() => navigateToLogin("sign-in", "user")}
+            onSignUp={() => navigateToLogin("sign-up", "user")}
           />
         </section>
       </main>
