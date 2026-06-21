@@ -49,8 +49,34 @@ Run the public health check only:
 npm run health:service
 ```
 
+Factory reset the app back to demo defaults:
+
+```bash
+npm run reset:factory -- --yes
+```
+
+Preview the reset without changing anything:
+
+```bash
+npm run reset:factory -- --dry-run
+```
+
 ## Service Startup
 
 The production service should start through `deployment/service-entrypoint.sh`.
 
 That script reuses the existing build when the current commit already has a recorded successful build. If the commit changed, dependencies are installed, the frontend is rebuilt, and then `deploy-server.js` is started.
+
+## Factory Reset Behavior
+
+The factory reset flow lives in `deployment/factory-reset.sh` and `backend/scripts/factory-reset.js`.
+
+It:
+
+1. backs up the current app state into `deployment/backups/factory-reset-<timestamp>/`
+2. wipes runtime order, inventory, profile, and signup data
+3. removes custom workflow JSON files while preserving the built-in defaults
+4. reseeds the demo products, sample orders, and default shop config
+5. restarts the live service and waits for health, unless `--skip-restart` is passed
+
+It intentionally preserves `backend/.env`, API keys, and deployment configuration.

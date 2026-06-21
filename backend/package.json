@@ -9,6 +9,7 @@
     "setup:env": "node scripts/setup-env.js",
     "seed:users": "node scripts/seed-users.js",
     "seed:demo": "node --no-warnings scripts/seed-demo-data.js",
+    "reset:factory:data": "node --no-warnings scripts/factory-reset.js",
     "test": "node src/workflow-runner.test.js && node src/workflow-builder.test.js"
   },
   "dependencies": {

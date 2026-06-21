@@ -194,6 +194,8 @@ Useful variants:
 ```bash
 npm run deploy:zo -- --skip-pull
 npm run deploy:zo -- --skip-pull --allow-dirty
+npm run reset:factory -- --dry-run
+npm run reset:factory -- --yes
 npm run restart:service
 npm run health:service
 ```
@@ -203,12 +205,51 @@ When to use them:
 - `npm run deploy:zo` deploys the latest committed code from the remote branch
 - `npm run deploy:zo -- --skip-pull` deploys the code already checked out locally
 - `npm run deploy:zo -- --skip-pull --allow-dirty` deploys local uncommitted changes for testing
+- `npm run reset:factory -- --dry-run` previews a full app reset without changing data
+- `npm run reset:factory -- --yes` wipes app data and restores the seeded demo state
 - `npm run restart:service` only restarts the live service
 - `npm run health:service` only checks the public health endpoint
 
 Deployment scripts live in `deployment/`.
 Deployment skill for future AI sessions: `Skills/zo-order-tracker-deploy/SKILL.md`.
 The production service startup path is `deployment/service-entrypoint.sh`, which reuses the existing build when the current commit is already built and rebuilds automatically when it is not.
+
+## Factory Reset
+
+To reset the app back to its demo defaults on Zo:
+
+```bash
+npm run reset:factory -- --yes
+```
+
+Preview the reset first:
+
+```bash
+npm run reset:factory -- --dry-run
+```
+
+What the factory reset does:
+
+1. creates a backup under `deployment/backups/`
+2. clears SQLite orders, inventory, and shop config state
+3. removes signed-up users and saved user profiles
+4. deletes published custom workflow JSON files
+5. reseeds the default demo products, sample orders, and default shop config
+6. restarts the Zo service and waits for health, unless `--skip-restart` is passed
+
+What it does not reset:
+
+- `backend/.env`
+- API keys and secrets
+- deployment scripts and service configuration
+- the built-in default workflow files
+
+Useful variants:
+
+```bash
+npm run reset:factory -- --dry-run
+npm run reset:factory -- --yes --skip-restart
+```
 
 Recommended Zo workflow:
 
