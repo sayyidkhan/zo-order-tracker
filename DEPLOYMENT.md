@@ -57,6 +57,11 @@ Run the public health check only:
 npm run health:service
 ```
 
+AI-facing skills live here:
+
+- `Skills/zo-order-tracker-deploy/SKILL.md`
+- `Skills/zo-order-tracker-sync-redeploy/SKILL.md`
+
 Factory reset the app back to demo defaults:
 
 ```bash

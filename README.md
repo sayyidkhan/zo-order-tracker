@@ -280,6 +280,11 @@ More deployment detail:
 DEPLOYMENT.md
 ```
 
+Deployment scripts live in `deployment/`.
+Deployment skill for future AI sessions: `Skills/zo-order-tracker-deploy/SKILL.md`.
+Sync-and-redeploy skill for future AI sessions: `Skills/zo-order-tracker-sync-redeploy/SKILL.md`.
+The production service startup path is `deployment/service-entrypoint.sh`, which reuses the existing build when the current commit is already built and rebuilds automatically when it is not.
+
 ## Factory Reset
 
 To reset the app back to its demo defaults on Zo:
