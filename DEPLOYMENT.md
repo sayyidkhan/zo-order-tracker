@@ -57,6 +57,18 @@ Run the public health check only:
 npm run health:service
 ```
 
+Factory reset the app back to demo defaults:
+
+```bash
+npm run reset:factory -- --yes
+```
+
+Preview the reset without changing anything:
+
+```bash
+npm run reset:factory -- --dry-run
+```
+
 ## Service Startup
 
 The production service should start through `deployment/service-entrypoint.sh`.
@@ -70,3 +82,17 @@ Runtime env loading is centralized:
 - `backend/.env` is still read as a legacy fallback.
 - `frontend/.env` is not required for production because the frontend defaults to same-origin API paths.
 - `PORT` should stay unset in `.env` because Zo injects it.
+
+## Factory Reset Behavior
+
+The factory reset flow lives in `deployment/factory-reset.sh` and `backend/scripts/factory-reset.js`.
+
+It:
+
+1. backs up the current app state into `deployment/backups/factory-reset-<timestamp>/`
+2. wipes runtime order, inventory, profile, and signup data
+3. removes custom workflow JSON files while preserving the built-in defaults
+4. reseeds the demo products, sample orders, and default shop config
+5. restarts the live service and waits for health, unless `--skip-restart` is passed
+
+It intentionally preserves repo-root `.env`, legacy `backend/.env`, API keys, and deployment configuration.

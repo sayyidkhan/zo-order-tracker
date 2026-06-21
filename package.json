@@ -12,6 +12,7 @@
     "prod": "NODE_ENV=production bash deployment/service-entrypoint.sh",
     "dev": "bun run clear-cache && NODE_ENV=development bun run --hot server.ts",
     "deploy:zo": "bash deployment/deploy.sh",
+    "reset:factory": "bash deployment/factory-reset.sh",
     "restart:service": "bash deployment/restart-service.sh",
     "health:service": "bash deployment/health-check.sh"
   },

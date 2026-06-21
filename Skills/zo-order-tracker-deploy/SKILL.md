@@ -57,6 +57,8 @@ cd /home/workspace/projects/zo-order-tracker
 npm run deploy:zo
 npm run deploy:zo -- --skip-pull
 npm run deploy:zo -- --skip-pull --allow-dirty
+npm run reset:factory -- --dry-run
+npm run reset:factory -- --yes
 npm run restart:service
 npm run health:service
 ```
@@ -66,8 +68,18 @@ When to use each:
 - `npm run deploy:zo`: normal deploy of latest committed remote code
 - `npm run deploy:zo -- --skip-pull`: deploy the current local checkout as-is
 - `npm run deploy:zo -- --skip-pull --allow-dirty`: deploy local uncommitted changes for testing
+- `npm run reset:factory -- --dry-run`: preview a full app reset without changing data
+- `npm run reset:factory -- --yes`: wipe app data, remove custom workflows, restore seeded demo defaults
 - `npm run restart:service`: restart only
 - `npm run health:service`: verify only
+
+Factory reset scope:
+
+- resets SQLite orders, inventory, and shop config data
+- removes signed-up users and saved user profiles
+- deletes published custom workflow JSON files except the built-in defaults
+- preserves repo-root `.env`, legacy `backend/.env`, secrets, and deployment configuration
+- creates a backup under `deployment/backups/` before changing anything
 
 Verification target:
 
