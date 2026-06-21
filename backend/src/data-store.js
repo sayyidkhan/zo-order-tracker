@@ -15,6 +15,30 @@ const db = new DatabaseSync(dbPath);
 db.exec("PRAGMA foreign_keys = ON");
 db.exec("PRAGMA journal_mode = WAL");
 
+const seedProducts = [
+  {
+    name: "egg tarts",
+    category: "pastry",
+    unit_price: 2,
+    image_url: seedProductImage("egg tarts"),
+    is_active: true
+  },
+  {
+    name: "bandung",
+    category: "sweet drink",
+    unit_price: 3,
+    image_url: seedProductImage("bandung"),
+    is_active: true
+  },
+  {
+    name: "lemonade",
+    category: "sweet drink",
+    unit_price: 3,
+    image_url: seedProductImage("lemonade"),
+    is_active: true
+  }
+];
+
 createSchema();
 
 export function listOrders({ username = null } = {}) {
@@ -133,7 +157,7 @@ export function completeOrder(orderId) {
 export function listInventoryProducts() {
   return db
     .prepare(
-      `SELECT id, name, category, unit_price, is_active, updated_at
+      `SELECT id, name, category, unit_price, image_url, is_active, updated_at
          FROM products
         ORDER BY category ASC, name ASC`
     )
@@ -143,6 +167,7 @@ export function listInventoryProducts() {
       name: product.name,
       category: product.category,
       unit_price: nullableNumber(product.unit_price),
+      image_url: product.image_url ?? "",
       is_active: Boolean(product.is_active),
       updated_at: product.updated_at
     }));
@@ -150,11 +175,15 @@ export function listInventoryProducts() {
 
 export function upsertInventoryProducts(products) {
   const upsert = db.prepare(
-    `INSERT INTO products (id, name, category, unit_price, is_active, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?)
+    `INSERT INTO products (id, name, category, unit_price, image_url, is_active, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?)
      ON CONFLICT(name) DO UPDATE SET
        category = excluded.category,
        unit_price = excluded.unit_price,
+       image_url = CASE
+         WHEN excluded.image_url = '' THEN products.image_url
+         ELSE excluded.image_url
+       END,
        is_active = excluded.is_active,
        updated_at = excluded.updated_at`
   );
@@ -166,6 +195,7 @@ export function upsertInventoryProducts(products) {
         normalizeProductName(product.name),
         product.category,
         product.unit_price,
+        product.image_url ?? "",
         product.is_active ? 1 : 0,
         now,
         now
@@ -184,6 +214,7 @@ export function updateInventoryProduct(productId, product) {
           SET name = ?,
               category = ?,
               unit_price = ?,
+              image_url = ?,
               is_active = ?,
               updated_at = ?
         WHERE id = ?`
@@ -192,6 +223,7 @@ export function updateInventoryProduct(productId, product) {
       normalizeProductName(product.name),
       product.category,
       product.unit_price,
+      product.image_url ?? "",
       product.is_active ? 1 : 0,
       now,
       productId
@@ -243,6 +275,7 @@ function createSchema() {
       name TEXT NOT NULL UNIQUE,
       category TEXT NOT NULL,
       unit_price REAL,
+      image_url TEXT NOT NULL DEFAULT '',
       is_active INTEGER NOT NULL DEFAULT 1,
       created_at TEXT NOT NULL,
       updated_at TEXT NOT NULL
@@ -276,6 +309,8 @@ function createSchema() {
 
   ensureOrdersColumn("placed_by_username", "TEXT");
   ensureOrdersColumn("fulfillment_status", "TEXT NOT NULL DEFAULT 'active'");
+  ensureProductsColumn("image_url", "TEXT NOT NULL DEFAULT ''");
+  backfillSeedProductImages();
   db.exec(
     `UPDATE orders
         SET fulfillment_status = 'completed'
@@ -283,6 +318,15 @@ function createSchema() {
         AND fulfillment_status = 'active'
         AND placed_by_username IS NULL`
   );
+}
+
+function ensureProductsColumn(columnName, columnType) {
+  const columns = db.prepare("PRAGMA table_info(products)").all();
+  if (columns.some((column) => column.name === columnName)) {
+    return;
+  }
+
+  db.exec(`ALTER TABLE products ADD COLUMN ${columnName} ${columnType}`);
 }
 
 function ensureOrdersColumn(columnName, columnType) {
@@ -309,7 +353,7 @@ function nullableNumber(value) {
 function getInventoryProduct(productId) {
   const product = db
     .prepare(
-      `SELECT id, name, category, unit_price, is_active, updated_at
+      `SELECT id, name, category, unit_price, image_url, is_active, updated_at
          FROM products
         WHERE id = ?`
     )
@@ -324,6 +368,7 @@ function getInventoryProduct(productId) {
     name: product.name,
     category: product.category,
     unit_price: nullableNumber(product.unit_price),
+    image_url: product.image_url ?? "",
     is_active: Boolean(product.is_active),
     updated_at: product.updated_at
   };
@@ -344,26 +389,73 @@ function normalizeProductName(name) {
   return name.trim().toLowerCase();
 }
 
-const seedProducts = [
-  {
-    name: "egg tarts",
-    category: "pastry",
-    unit_price: 2,
-    is_active: true
-  },
-  {
-    name: "bandung",
-    category: "sweet drink",
-    unit_price: 3,
-    is_active: true
-  },
-  {
-    name: "lemonade",
-    category: "sweet drink",
-    unit_price: 3,
-    is_active: true
+function backfillSeedProductImages() {
+  const update = db.prepare("UPDATE products SET image_url = ? WHERE name = ? AND COALESCE(image_url, '') = ''");
+  for (const product of seedProducts) {
+    update.run(product.image_url, normalizeProductName(product.name));
   }
-];
+}
+
+function seedProductImage(productName) {
+  const image = {
+    "egg tarts": {
+      label: "Egg Tarts",
+      bg: "#fff3d7",
+      plate: "#f9c86c",
+      accent: "#a16207",
+      shapes: `
+        <circle cx="96" cy="122" r="39" fill="#f8d27c"/>
+        <circle cx="96" cy="122" r="27" fill="#fff1a8"/>
+        <circle cx="166" cy="102" r="37" fill="#f8d27c"/>
+        <circle cx="166" cy="102" r="25" fill="#fff1a8"/>
+        <circle cx="168" cy="164" r="34" fill="#f8d27c"/>
+        <circle cx="168" cy="164" r="23" fill="#fff1a8"/>
+      `
+    },
+    bandung: {
+      label: "Bandung",
+      bg: "#ffe4ef",
+      plate: "#f472b6",
+      accent: "#9d174d",
+      shapes: `
+        <rect x="94" y="54" width="78" height="146" rx="22" fill="#f9a8d4"/>
+        <rect x="104" y="80" width="58" height="102" rx="16" fill="#fb7185"/>
+        <rect x="116" y="38" width="34" height="28" rx="9" fill="#fff7ed"/>
+        <path d="M149 42 C184 16 202 28 194 60" fill="none" stroke="#9d174d" stroke-width="8" stroke-linecap="round"/>
+        <circle cx="120" cy="103" r="7" fill="#ffe4ef"/>
+        <circle cx="146" cy="142" r="8" fill="#ffe4ef"/>
+      `
+    },
+    lemonade: {
+      label: "Lemonade",
+      bg: "#ecfccb",
+      plate: "#facc15",
+      accent: "#3f6212",
+      shapes: `
+        <rect x="88" y="62" width="86" height="140" rx="24" fill="#fde047"/>
+        <rect x="99" y="92" width="64" height="83" rx="16" fill="#fef08a"/>
+        <path d="M108 56 C134 28 164 35 184 65" fill="none" stroke="#84cc16" stroke-width="9" stroke-linecap="round"/>
+        <circle cx="133" cy="132" r="25" fill="#facc15"/>
+        <path d="M133 108 L133 156 M109 132 H157 M116 115 L150 149 M150 115 L116 149" stroke="#fff7ad" stroke-width="4" stroke-linecap="round"/>
+      `
+    }
+  }[productName] ?? {
+    label: productName,
+    bg: "#eef2ff",
+    plate: "#818cf8",
+    accent: "#3730a3",
+    shapes: `<rect x="80" y="70" width="112" height="112" rx="28" fill="#c7d2fe"/>`
+  };
+
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256">
+    <rect width="256" height="256" rx="44" fill="${image.bg}"/>
+    <ellipse cx="132" cy="178" rx="82" ry="20" fill="${image.plate}" opacity="0.3"/>
+    ${image.shapes}
+    <text x="128" y="228" text-anchor="middle" font-family="Arial, sans-serif" font-size="22" font-weight="800" fill="${image.accent}">${image.label}</text>
+  </svg>`;
+
+  return `data:image/svg+xml,${encodeURIComponent(svg)}`;
+}
 
 const seedOrders = [
   {

@@ -1,5 +1,6 @@
 import * as React from "react";
 import { StrictMode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { createRoot } from "react-dom/client";
 import { QueryClient, QueryClientProvider, type UseMutationResult, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
@@ -14,6 +15,9 @@ import {
   Code2,
   Cpu,
   Database,
+  Download,
+  ExternalLink,
+  FileText,
   FileJson,
   GitBranch,
   Globe2,
@@ -21,8 +25,10 @@ import {
   Layers3,
   Loader2,
   LogOut,
+  Maximize2,
   MessageSquareText,
   Package2,
+  Pause,
   Pencil,
   Minus,
   Play,
@@ -140,14 +146,15 @@ type WorkflowChatMessage = {
 };
 
 type AuthRole = "user" | "admin";
-type AppRoute = "intro" | "login" | AuthRole | "tech-stack";
+type AppRoute = "intro" | "login" | AuthRole | "tech-stack" | "why-zo-computer";
 type AuthMode = "sign-in" | "sign-up";
 type AdminTab = "orders" | "rules" | "inventory" | "branding";
 type WorkflowBuilderTab = "rules" | "draft" | "test";
 type CapturePeriodDays = 1 | 3 | 7 | 30 | 90 | 365;
 type InventorySubTab = "inventory" | "sales" | "analytics";
 type UserTab = "menu" | "my-orders" | "profile";
-type OrderFlowTab = "menu" | "checkout";
+type OrderFlowTab = "choice" | "menu" | "chatbot" | "checkout";
+type ChatOrderStep = "choose" | "review" | "payment" | "complete";
 type UserProfile = {
   username: string;
   first_name: string;
@@ -198,6 +205,7 @@ type InventoryProduct = {
   name: string;
   category: string;
   unit_price: number | null;
+  image_url: string;
   is_active: boolean;
   updated_at?: string;
 };
@@ -205,12 +213,14 @@ type InventoryProductInput = {
   name?: unknown;
   category?: unknown;
   unit_price?: unknown;
+  image_url?: unknown;
   is_active?: unknown;
 };
 type InventoryProductDraft = {
   name: string;
   category: string;
   unit_price: string;
+  image_url: string;
   is_active: boolean;
 };
 type InventorySnapshot = {
@@ -323,6 +333,8 @@ const techArchitectureSteps = [
 ];
 
 const techSourceDocs = ["docs/tech-stack.md", "docs/ZO_INFRA.md", "docs/USER_JOURNEY.md", "docs/workflow-schema.md"];
+const maxPaymentProofPayloadLength = 1_450_000;
+const maxProductImagePayloadLength = 850_000;
 
 const techStackSections: TechStackSection[] = [
   {
@@ -443,10 +455,6 @@ function Workspace() {
   const [activeRoute, setActiveRoute] = useStateValue<AppRoute>(getInitialRoute());
   const [loginMode, setLoginMode] = useStateValue<AuthMode>(getAuthModeFromUrl());
   const [auth, setAuth] = useState<AuthState>(loadAuthState);
-  const [businessDescription, setBusinessDescription] = useStateValue(
-    "Small Singapore dessert stall selling egg tarts and sweet drinks. Drinks are usually bandung or lemonade. Customers pay only by PayNow or bank transfer."
-  );
-  const [generatedWorkflow, setGeneratedWorkflow] = useState<WorkflowGeneration | null>(loadGeneratedWorkflowDraft);
   const queryClient = useQueryClient();
   const orderAccess = getOrderAccess(auth);
   const ordersQuery = useQuery({
@@ -455,60 +463,6 @@ function Workspace() {
     queryFn: () => fetchOrders(orderAccess as AuthAccess)
   });
   const orders = ordersQuery.data ?? [];
-
-  const generateMutation = useMutation({
-    mutationFn: async ({
-      businessDescription: requestedBusinessDescription,
-      changeRequest = "",
-      existingWorkflow = null
-    }: WorkflowGenerateInput = {}) => {
-      const credential = auth.admin;
-      if (!credential) {
-        throw new Error("Sign in to the admin workspace first.");
-      }
-
-      const requestBody = {
-        business_description: requestedBusinessDescription ?? businessDescription,
-        change_request: changeRequest,
-        common_order_messages: sampleMessages.slice(0, 3),
-        ...(existingWorkflow ? { existing_workflow: existingWorkflow } : {}),
-        paid_phrases: [
-          "payment proof uploaded",
-          "payment screenshot uploaded",
-          "uploaded screenshot",
-          "receipt uploaded",
-          "paynow receipt",
-          "bank transfer receipt",
-          "paid"
-        ],
-        pay_later_phrases: [],
-        required_fields: ["payment_evidence"],
-        workflow_id: "seller-rule-flow",
-        workflow_name: "Seller Rule Flow",
-        save: false
-      };
-
-      const response = await fetch(`${apiBase}/workflows/generate`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          ...authHeaders("admin", credential)
-        },
-        body: JSON.stringify(requestBody)
-      });
-
-      if (!response.ok) {
-        throw new Error(await readApiError(response));
-      }
-
-      return (await response.json()) as WorkflowGeneration;
-    },
-    onSuccess: setGeneratedWorkflow
-  });
-
-  useEffect(() => {
-    saveGeneratedWorkflowDraft(generatedWorkflow);
-  }, [generatedWorkflow]);
 
   const metrics = buildMetrics(orders);
   const shopConfigQuery = useQuery({
@@ -604,6 +558,17 @@ function Workspace() {
     );
   }
 
+  if (activeRoute === "why-zo-computer") {
+    return (
+      <main className="app-shell is-authenticated is-docs-route">
+        <section className="workspace is-authenticated why-zo-workspace">
+          <PublicPageTopbar onNavigate={navigateToRoute} activeRoute="why-zo-computer" showBack />
+          <WhyZoComputerView onNavigate={navigateToRoute} />
+        </section>
+      </main>
+    );
+  }
+
   if (activeRoute === "login") {
     return (
       <main className="app-shell is-signed-out">
@@ -680,15 +645,10 @@ function Workspace() {
         {activeRoute === "admin" ? (
           <AdminView
             adminCredential={auth.admin!}
-            businessDescription={businessDescription}
-            setBusinessDescription={setBusinessDescription}
-            generateMutation={generateMutation}
-            generatedWorkflow={generatedWorkflow}
             orders={orders}
             metrics={metrics}
             shopBranding={shopBranding}
             onShopBrandingSaved={() => queryClient.invalidateQueries({ queryKey: ["shop-config"] })}
-            onWorkflowDraftCleared={() => setGeneratedWorkflow(null)}
           />
         ) : null}
       </section>
@@ -883,6 +843,142 @@ function TechStackView({ onNavigate }: { onNavigate: (route: AppRoute) => void }
   );
 }
 
+function WhyZoComputerView({ onNavigate }: { onNavigate: (route: AppRoute) => void }) {
+  const infraCards = [
+    {
+      title: "Frontend",
+      copy: "The customer storefront and admin workspace ship from the same place.",
+      icon: <Layers3 size={18} />
+    },
+    {
+      title: "Backend",
+      copy: "API routes, workflow logic, and order processing run beside the app.",
+      icon: <Server size={18} />
+    },
+    {
+      title: "Database",
+      copy: "SQLite keeps the MVP local-first and inspectable while the system is still small.",
+      icon: <Database size={18} />
+    },
+    {
+      title: "Hosting and URL",
+      copy: "The deploy target, hosting surface, and reachable URL are covered together.",
+      icon: <Globe2 size={18} />
+    }
+  ];
+
+  const setupSteps = [
+    "Start from an empty workspace.",
+    "Add the frontend, backend, and SQLite file.",
+    "Seed demo users, inventory, and shop config.",
+    "Deploy the site and iterate from the same environment."
+  ];
+
+  return (
+    <div className="why-zo-page">
+      <header className="why-zo-hero">
+        <div className="why-zo-hero-copy">
+          <BrandMark businessName="zorder" markLetter="Z" onHomeClick={() => onNavigate("user")} />
+          <h1>Why deploy on Zo Computer?</h1>
+          <p>
+            Start from 0, then scale cost as your userbase increases. Zo Computer keeps the application in one
+            place: frontend, backend, database, hosting, and URL.
+          </p>
+          <div className="why-zo-value-strip" aria-label="Main Zo Computer deployment benefit">
+            <span>Start from 0</span>
+            <strong>Scale cost with real usage</strong>
+            <small>No heavy infra commitment before demand exists.</small>
+          </div>
+          <div className="why-zo-actions">
+            <button className="primary-button" type="button" onClick={() => onNavigate("user")}>
+              <Cloud size={18} />
+              Open zorder
+              <ArrowRight size={16} />
+            </button>
+            <button className="secondary-button" type="button" onClick={() => onNavigate("tech-stack")}>
+              <Workflow size={18} />
+              View tech stack
+            </button>
+          </div>
+        </div>
+
+        <aside className="why-zo-control-plane" aria-label="Zo Computer deployment summary">
+          <div className="why-zo-control-top">
+            <span>Zo Computer</span>
+            <strong>one workspace</strong>
+          </div>
+          <div className="why-zo-control-grid">
+            <span>FE</span>
+            <span>BE</span>
+            <span>DB</span>
+            <span>URL</span>
+          </div>
+          <p>Start from zero, keep the moving parts together, then increase spend only when the userbase grows.</p>
+        </aside>
+      </header>
+
+      <section className="why-zo-section" aria-labelledby="why-zo-infra-heading">
+        <div className="why-zo-section-heading">
+          <h2 id="why-zo-infra-heading">Infra in one place</h2>
+          <p>
+            For a small product like zorder, fewer deployment surfaces means faster iteration and fewer operational
+            questions during demo, testing, and early customer use.
+          </p>
+        </div>
+        <div className="why-zo-infra-grid">
+          {infraCards.map((card) => (
+            <article className="why-zo-card" key={card.title}>
+              <div className="why-zo-card-icon">{card.icon}</div>
+              <h3>{card.title}</h3>
+              <p>{card.copy}</p>
+            </article>
+          ))}
+        </div>
+      </section>
+
+      <section className="why-zo-split" aria-labelledby="why-zo-start-heading">
+        <div className="why-zo-start-panel">
+          <h2 id="why-zo-start-heading">You can start from zero</h2>
+          <p>
+            Setup should feel direct: create the workspace, put the app there, seed the local data, and get a working
+            URL. You should not need serious infrastructure spend just to prove the product works.
+          </p>
+          <ol className="why-zo-setup-list">
+            {setupSteps.map((step) => (
+              <li key={step}>{step}</li>
+            ))}
+          </ol>
+        </div>
+
+        <div className="why-zo-data-panel">
+          <ShieldCheck size={24} />
+          <h2>You own your data</h2>
+          <p>
+            Orders, products, workflow files, and configuration can stay with the application instead of being scattered
+            across third-party services. That is a stronger operator position for a small seller.
+          </p>
+          <strong>Still do backups.</strong>
+          <span>Ownership is useful only if recovery is planned.</span>
+        </div>
+      </section>
+
+      <section className="why-zo-footer-band" aria-labelledby="why-zo-operator-heading">
+        <div>
+          <h2 id="why-zo-operator-heading">The operator reason</h2>
+          <p>
+            Zo Computer reduces the number of things you need to coordinate before you can learn from real usage.
+            Ship first, keep control of the data, then let cost and complexity grow only after users create demand.
+          </p>
+        </div>
+        <button className="secondary-button" type="button" onClick={() => onNavigate("intro")}>
+          <Sparkles size={18} />
+          Back to intro
+        </button>
+      </section>
+    </div>
+  );
+}
+
 function BrandMark({
   businessName,
   markLetter,
@@ -936,6 +1032,14 @@ function PublicSiteNav({
         onClick={() => onNavigate("tech-stack")}
       >
         Tech stack
+      </button>
+      <button
+        className={`public-site-nav-link${activeRoute === "why-zo-computer" ? " is-active" : ""}`}
+        type="button"
+        aria-current={activeRoute === "why-zo-computer" ? "page" : undefined}
+        onClick={() => onNavigate("why-zo-computer")}
+      >
+        Why Zo
       </button>
     </nav>
   );
@@ -1391,7 +1495,8 @@ function UserView({
 }) {
   const queryClient = useQueryClient();
   const [activeTab, setActiveTab] = useStateValue<UserTab>("menu");
-  const [orderFlowTab, setOrderFlowTab] = useStateValue<OrderFlowTab>("menu");
+  const [orderFlowTab, setOrderFlowTab] = useStateValue<OrderFlowTab>("choice");
+  const [chatStep, setChatStep] = useStateValue<ChatOrderStep>("choose");
   const [ordersSubTab, setOrdersSubTab] = useStateValue<CustomerOrdersTab>("current");
   const [cart, setCart] = useStateValue<CartLine[]>([]);
   const [notes, setNotes] = useStateValue("");
@@ -1415,13 +1520,18 @@ function UserView({
         notes
       }),
     onSuccess: (result) => {
+      const shouldStayInChat = orderFlowTab === "chatbot";
       setCart([]);
       setNotes("");
       setPaymentProofImage("");
       setPaymentProofNotice(null);
       setPlacedNotice(result.workflow.message);
       setOrdersSubTab("current");
-      setActiveTab("my-orders");
+      if (shouldStayInChat) {
+        setChatStep("complete");
+      } else {
+        setActiveTab("my-orders");
+      }
       void queryClient.invalidateQueries({ queryKey: ["orders"] });
       void queryClient.invalidateQueries({ queryKey: ["inventory"] });
     }
@@ -1448,11 +1558,17 @@ function UserView({
       shopBranding.bank_account_number.trim()
   );
 
-  const tabs: Array<{ id: UserTab; label: string; meta: string; icon: React.ReactNode }> = [
+  useEffect(() => {
+    if (!cartCount && chatStep !== "choose" && chatStep !== "complete") {
+      setChatStep("choose");
+    }
+  }, [cartCount, chatStep, setChatStep]);
+
+  const tabs: Array<{ id: UserTab; label: string; meta?: string; icon: React.ReactNode }> = [
     {
       id: "menu",
       label: "Menu",
-      meta: cartCount ? `${cartCount} in cart` : `${products.length} items`,
+      meta: cartCount ? `${cartCount} in cart` : undefined,
       icon: <ShoppingBag size={16} />
     },
     {
@@ -1476,17 +1592,24 @@ function UserView({
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      setPaymentProofNotice("Upload an image file for your payment proof.");
-      return;
+    try {
+      const proofData = await paymentProofFileToDataUrl(file);
+      setPaymentProofImage(proofData);
+      setPaymentProofNotice(
+        isPaymentProofPdf(proofData)
+          ? "Payment proof PDF uploaded. You can place your order after checking the details."
+          : "Payment proof image uploaded. You can place your order after checking the details."
+      );
+    } catch (cause) {
+      setPaymentProofNotice(cause instanceof Error ? cause.message : "Could not read payment proof.");
     }
-
-    const imageData = await imageFileToDataUrl(file);
-    setPaymentProofImage(imageData);
-    setPaymentProofNotice("Payment proof uploaded. You can place your order after checking the details.");
   }
 
   function updateCartQuantity(product: InventoryProduct, nextQuantity: number) {
+    if (orderFlowTab === "chatbot" && chatStep === "complete" && nextQuantity > 0) {
+      setChatStep("choose");
+    }
+
     setCart((current) => {
       if (nextQuantity <= 0) {
         return current.filter((line) => line.product.id !== product.id);
@@ -1507,6 +1630,13 @@ function UserView({
     return cart.find((line) => line.product.id === productId)?.quantity ?? 0;
   }
 
+  function selectUserTab(tab: UserTab) {
+    setActiveTab(tab);
+    if (tab === "menu") {
+      setOrderFlowTab("choice");
+    }
+  }
+
   return (
     <div className="user-workspace customer-workspace">
       <div className="journey-tabs" role="tablist" aria-label="Customer order sections">
@@ -1519,12 +1649,12 @@ function UserView({
             aria-selected={activeTab === tab.id}
             aria-controls={`user-panel-${tab.id}`}
             id={`user-tab-${tab.id}`}
-            onClick={() => setActiveTab(tab.id)}
+            onClick={() => selectUserTab(tab.id)}
           >
             {tab.icon}
             <span className="journey-tab-copy">
               <span className="journey-tab-label">{tab.label}</span>
-              <span className="journey-tab-meta">{tab.meta}</span>
+              {tab.meta ? <span className="journey-tab-meta">{tab.meta}</span> : null}
             </span>
           </button>
         ))}
@@ -1538,38 +1668,13 @@ function UserView({
       >
         {activeTab === "menu" ? (
           <>
-            <div className="customer-order-flow-tabs" role="tablist" aria-label="Menu and checkout">
-              <button
-                className={`customer-order-flow-tab${orderFlowTab === "menu" ? " is-active" : ""}`}
-                type="button"
-                role="tab"
-                aria-selected={orderFlowTab === "menu"}
-                aria-controls="customer-order-flow-menu"
-                id="customer-order-flow-tab-menu"
-                onClick={() => setOrderFlowTab("menu")}
-              >
-                <ShoppingBag size={16} />
-                <span>
-                  Menu
-                  <small>{products.length} items</small>
-                </span>
-              </button>
-              <button
-                className={`customer-order-flow-tab${orderFlowTab === "checkout" ? " is-active" : ""}`}
-                type="button"
-                role="tab"
-                aria-selected={orderFlowTab === "checkout"}
-                aria-controls="customer-order-flow-checkout"
-                id="customer-order-flow-tab-checkout"
-                onClick={() => setOrderFlowTab("checkout")}
-              >
-                <WalletCards size={16} />
-                <span>
-                  Checkout
-                  <small>{cartCount ? `${cartCount} in cart · ${formatAmount(cartTotal, "SGD")}` : "Empty"}</small>
-                </span>
-              </button>
-            </div>
+            {orderFlowTab === "choice" ? (
+              <OrderMethodChoicePanel
+                cartCount={cartCount}
+                onUseMenu={() => setOrderFlowTab("menu")}
+                onUseChatbot={() => setOrderFlowTab("chatbot")}
+              />
+            ) : null}
 
             {orderFlowTab === "menu" ? (
           <section
@@ -1583,12 +1688,17 @@ function UserView({
                 <p className="section-label">menu</p>
                 <h2 id="customer-menu-heading">Choose what to order</h2>
               </div>
+              <div className="customer-flow-actions">
+                <button className="text-link" type="button" onClick={() => setOrderFlowTab("choice")}>
+                  Change order method
+                </button>
               {cartCount ? (
                 <button className="secondary-button" type="button" onClick={() => setOrderFlowTab("checkout")}>
                   Checkout ({cartCount})
                   <ArrowRight size={16} />
                 </button>
               ) : null}
+              </div>
             </div>
 
             {menuQuery.isLoading ? (
@@ -1608,6 +1718,11 @@ function UserView({
                             className={`customer-menu-card${quantity ? " is-selected" : ""}`}
                             key={product.id}
                           >
+                            <ProductImageDisplay
+                              imageUrl={product.image_url}
+                              name={product.name}
+                              className="customer-menu-card-image"
+                            />
                             <div className="customer-menu-card-copy">
                               <strong>{product.name}</strong>
                               <span>{formatAmount(product.unit_price, "SGD")} each</span>
@@ -1662,6 +1777,45 @@ function UserView({
           </section>
             ) : null}
 
+            {orderFlowTab === "chatbot" ? (
+              <OrderChatbotPanel
+                shopBranding={shopBranding}
+                products={products}
+                productsByCategory={productsByCategory}
+                cart={cart}
+                cartCount={cartCount}
+                cartTotal={cartTotal}
+                hasPartialPricing={hasPartialPricing}
+                chatStep={chatStep}
+                notes={notes}
+                paymentProofImage={paymentProofImage}
+                paymentProofNotice={paymentProofNotice}
+                acceptedPaymentMethods={acceptedPaymentMethods}
+                hasPayNowDetails={hasPayNowDetails}
+                hasBankTransferDetails={hasBankTransferDetails}
+                placeOrderMutation={placeOrderMutation}
+                onSubmitOrder={() => {
+                  setPlacedNotice(null);
+                  placeOrderMutation.mutate();
+                }}
+                onChatStepChange={setChatStep}
+                onNotesChange={setNotes}
+                onPaymentProofUpload={handlePaymentProofUpload}
+                onPaymentProofRemove={() => {
+                  setPaymentProofImage("");
+                  setPaymentProofNotice("Payment proof removed.");
+                }}
+                onProductQuantityChange={updateCartQuantity}
+                getCartQuantity={getCartQuantity}
+                onViewOrders={() => {
+                  setOrdersSubTab("current");
+                  setActiveTab("my-orders");
+                }}
+                onChangeOrderMethod={() => setOrderFlowTab("choice")}
+                onBrowseMenu={() => setOrderFlowTab("menu")}
+              />
+            ) : null}
+
             {orderFlowTab === "checkout" ? (
           <section
             className="customer-order-cart panel customer-checkout-panel"
@@ -1674,7 +1828,12 @@ function UserView({
                 <p className="section-label">checkout</p>
                 <h2 id="customer-cart-heading">Review and place your order</h2>
               </div>
-              {cartCount ? <span className="count-pill">{cartCount} items</span> : null}
+              <div className="customer-flow-actions">
+                <button className="text-link" type="button" onClick={() => setOrderFlowTab("choice")}>
+                  Change order method
+                </button>
+                {cartCount ? <span className="count-pill">{cartCount} items</span> : null}
+              </div>
             </div>
 
             {cart.length ? (
@@ -1748,11 +1907,7 @@ function UserView({
                           )}
                         </div>
                         {shopBranding.paynow_qr_image ? (
-                          <img
-                            className="customer-payment-qr"
-                            src={shopBranding.paynow_qr_image}
-                            alt="PayNow QR code"
-                          />
+                          <PaymentQrPreview src={shopBranding.paynow_qr_image} />
                         ) : (
                           <span className="customer-payment-qr-unavailable">QR not available</span>
                         )}
@@ -1787,23 +1942,16 @@ function UserView({
                   Payment proof
                 </label>
                 <p className="branding-helper-text customer-payment-proof-copy">
-                  Upload a screenshot or photo of your PayNow or bank transfer receipt.
+                  Upload a screenshot, photo, or PDF of your PayNow or bank transfer receipt.
                 </p>
                 {paymentProofImage ? (
-                  <div className="payment-proof-preview">
-                    <img src={paymentProofImage} alt="Uploaded payment proof" />
-                    <button
-                      className="icon-button"
-                      type="button"
-                      aria-label="Remove payment proof"
-                      onClick={() => {
-                        setPaymentProofImage("");
-                        setPaymentProofNotice("Payment proof removed.");
-                      }}
-                    >
-                      <X size={16} />
-                    </button>
-                  </div>
+                  <PaymentProofDraftPreview
+                    evidence={paymentProofImage}
+                    onRemove={() => {
+                      setPaymentProofImage("");
+                      setPaymentProofNotice("Payment proof removed.");
+                    }}
+                  />
                 ) : null}
                 <label className="secondary-button payment-proof-upload-button" htmlFor="payment-proof">
                   <Upload size={16} />
@@ -1813,7 +1961,7 @@ function UserView({
                   id="payment-proof"
                   className="visually-hidden"
                   type="file"
-                  accept="image/*"
+                  accept="image/*,application/pdf,.pdf"
                   onChange={(event) => {
                     void handlePaymentProofUpload(event.target.files?.[0] ?? null);
                     event.target.value = "";
@@ -1858,7 +2006,7 @@ function UserView({
             historyOrders={historyOrders}
             placedNotice={placedNotice}
             onStartOrdering={() => {
-              setOrderFlowTab("menu");
+              setOrderFlowTab("choice");
               setActiveTab("menu");
             }}
           />
@@ -1873,6 +2021,480 @@ function UserView({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function ProductImageDisplay({
+  imageUrl,
+  name,
+  className = "product-image"
+}: {
+  imageUrl?: string | null;
+  name: string;
+  className?: string;
+}) {
+  const safeImageUrl = (imageUrl ?? "").trim();
+  const [isOpen, setIsOpen] = useStateValue(false);
+
+  if (safeImageUrl) {
+    return (
+      <>
+        <button
+          className={`${className} product-image-button`}
+          type="button"
+          aria-label={`Open larger image for ${name}`}
+          title="Open larger image"
+          onClick={() => setIsOpen(true)}
+        >
+          <img src={safeImageUrl} alt={name} />
+          <span className="product-image-zoom" aria-hidden="true">
+            <Maximize2 size={13} />
+          </span>
+        </button>
+        {isOpen ? (
+          <PaymentProofImageModal
+            src={safeImageUrl}
+            onClose={() => setIsOpen(false)}
+            ariaLabel={`Larger image for ${name}`}
+            alt={name}
+          />
+        ) : null}
+      </>
+    );
+  }
+
+  return (
+    <div className={className}>
+      <span aria-hidden="true">
+        <Package2 size={20} />
+      </span>
+    </div>
+  );
+}
+
+function OrderMethodChoicePanel({
+  cartCount,
+  onUseMenu,
+  onUseChatbot
+}: {
+  cartCount: number;
+  onUseMenu: () => void;
+  onUseChatbot: () => void;
+}) {
+  return (
+    <section className="panel order-method-choice-panel" aria-labelledby="order-method-heading">
+      <div className="order-method-heading">
+        <p className="section-label">order preference</p>
+        <h2 id="order-method-heading">How would you prefer to order?</h2>
+        <p>We recommend the menu for the smoothest session. Use the chatbot if you want step-by-step guidance.</p>
+      </div>
+
+      <div className="order-method-actions">
+        <button className="order-method-card is-recommended" type="button" onClick={onUseMenu}>
+          <span className="order-method-icon" aria-hidden="true">
+            <ShoppingBag size={24} />
+          </span>
+          <span className="order-method-copy">
+            <strong>Use Menu</strong>
+            <small>Recommended</small>
+          </span>
+          <span className="order-method-badge">Smoothest</span>
+        </button>
+
+        <button className="order-method-card" type="button" onClick={onUseChatbot}>
+          <span className="order-method-icon" aria-hidden="true">
+            <Bot size={24} />
+          </span>
+          <span className="order-method-copy">
+            <strong>Use Chatbot</strong>
+            <small>{cartCount ? `${cartCount} selected · guided steps` : "Guided steps"}</small>
+          </span>
+          <ArrowRight size={20} aria-hidden="true" />
+        </button>
+      </div>
+    </section>
+  );
+}
+
+function OrderChatbotPanel({
+  shopBranding,
+  products,
+  productsByCategory,
+  cart,
+  cartCount,
+  cartTotal,
+  hasPartialPricing,
+  chatStep,
+  notes,
+  paymentProofImage,
+  paymentProofNotice,
+  acceptedPaymentMethods,
+  hasPayNowDetails,
+  hasBankTransferDetails,
+  placeOrderMutation,
+  onSubmitOrder,
+  onChatStepChange,
+  onNotesChange,
+  onPaymentProofUpload,
+  onPaymentProofRemove,
+  onProductQuantityChange,
+  getCartQuantity,
+  onViewOrders,
+  onChangeOrderMethod,
+  onBrowseMenu
+}: {
+  shopBranding: ShopBranding;
+  products: InventoryProduct[];
+  productsByCategory: Array<[string, InventoryProduct[]]>;
+  cart: CartLine[];
+  cartCount: number;
+  cartTotal: number;
+  hasPartialPricing: boolean;
+  chatStep: ChatOrderStep;
+  notes: string;
+  paymentProofImage: string;
+  paymentProofNotice: string | null;
+  acceptedPaymentMethods: string[];
+  hasPayNowDetails: boolean;
+  hasBankTransferDetails: boolean;
+  placeOrderMutation: UseMutationResult<PlaceOrderResult, Error, void>;
+  onSubmitOrder: () => void;
+  onChatStepChange: React.Dispatch<React.SetStateAction<ChatOrderStep>>;
+  onNotesChange: React.Dispatch<React.SetStateAction<string>>;
+  onPaymentProofUpload: (file: File | null) => Promise<void>;
+  onPaymentProofRemove: () => void;
+  onProductQuantityChange: (product: InventoryProduct, nextQuantity: number) => void;
+  getCartQuantity: (productId?: string) => number;
+  onViewOrders: () => void;
+  onChangeOrderMethod: () => void;
+  onBrowseMenu: () => void;
+}) {
+  const orderSteps: Array<{ id: ChatOrderStep; label: string }> = [
+    { id: "choose", label: "Choose" },
+    { id: "review", label: "Review" },
+    { id: "payment", label: "Pay" },
+    { id: "complete", label: "Complete" }
+  ];
+  const currentStepIndex = Math.max(0, orderSteps.findIndex((step) => step.id === chatStep));
+  const canSubmitOrder = cartCount > 0 && Boolean(paymentProofImage) && !placeOrderMutation.isPending;
+
+  return (
+    <section
+      className="customer-order-chatbot panel"
+      aria-labelledby="customer-chatbot-heading"
+      id="customer-order-flow-chatbot"
+      role="tabpanel"
+    >
+      <div className="panel-heading">
+        <div>
+          <p className="section-label">order chatbot</p>
+          <h2 id="customer-chatbot-heading">Guided ordering</h2>
+        </div>
+        <div className="customer-flow-actions">
+          <button className="text-link" type="button" onClick={onChangeOrderMethod}>
+            Change order method
+          </button>
+          {cartCount ? <span className="count-pill">{cartCount} selected</span> : null}
+        </div>
+      </div>
+
+      <div className="order-chatbot-steps" aria-label="Chatbot order progress">
+        {orderSteps.map((step, index) => (
+          <span
+            className={[
+              "order-chatbot-step",
+              index < currentStepIndex ? "is-done" : "",
+              index === currentStepIndex ? "is-active" : ""
+            ]
+              .filter(Boolean)
+              .join(" ")}
+            key={step.id}
+          >
+            {step.label}
+          </span>
+        ))}
+      </div>
+
+      <div className="order-chatbot-log" aria-live="polite">
+        <article className="order-chat-message is-bot">
+          <div className="order-chat-avatar" aria-hidden="true">
+            <Bot size={16} />
+          </div>
+          <div className="order-chat-bubble">
+            <strong>Welcome to {shopBranding.business_name}</strong>
+            <p>{shopBranding.description}</p>
+          </div>
+        </article>
+
+        {chatStep !== "complete" ? (
+          <article className="order-chat-message is-bot">
+            <div className="order-chat-avatar" aria-hidden="true">
+              <Bot size={16} />
+            </div>
+            <div className="order-chat-bubble">
+              <strong>What would you like to eat?</strong>
+              <p>Tap the products below and set the quantity.</p>
+            </div>
+          </article>
+        ) : null}
+
+        {chatStep === "choose" ? (
+          <>
+            {products.length ? (
+              <div className="chatbot-product-picker">
+                {productsByCategory.map(([category, categoryProducts]) => (
+                  <section className="chatbot-product-group" key={category} aria-label={category}>
+                    <h3>{category}</h3>
+                    <div className="customer-menu-grid">
+                      {categoryProducts.map((product) => {
+                        const quantity = getCartQuantity(product.id);
+                        return (
+                          <article
+                            className={`customer-menu-card${quantity ? " is-selected" : ""}`}
+                            key={product.id}
+                          >
+                            <ProductImageDisplay
+                              imageUrl={product.image_url}
+                              name={product.name}
+                              className="customer-menu-card-image"
+                            />
+                            <div className="customer-menu-card-copy">
+                              <strong>{product.name}</strong>
+                              <span>{formatAmount(product.unit_price, "SGD")} each</span>
+                            </div>
+                            <div className="customer-menu-stepper">
+                              <button
+                                className="icon-button"
+                                type="button"
+                                aria-label={`Remove one ${product.name}`}
+                                disabled={quantity === 0}
+                                onClick={() => onProductQuantityChange(product, quantity - 1)}
+                              >
+                                <Minus size={16} />
+                              </button>
+                              <span aria-live="polite">{quantity}</span>
+                              <button
+                                className="icon-button"
+                                type="button"
+                                aria-label={`Add one ${product.name}`}
+                                onClick={() => onProductQuantityChange(product, quantity + 1)}
+                              >
+                                <Plus size={16} />
+                              </button>
+                            </div>
+                          </article>
+                        );
+                      })}
+                    </div>
+                  </section>
+                ))}
+              </div>
+            ) : (
+              <div className="empty-preview">
+                <Package2 size={20} />
+                <p>The shop has not published a menu yet. Check back soon.</p>
+              </div>
+            )}
+
+            {cartCount ? (
+              <div className="chatbot-action-card">
+                <CartTotalsSummary
+                  cartCount={cartCount}
+                  cartTotal={cartTotal}
+                  hasPartialPricing={hasPartialPricing}
+                />
+                <button className="primary-button" type="button" onClick={() => onChatStepChange("review")}>
+                  Review total
+                  <ArrowRight size={16} />
+                </button>
+              </div>
+            ) : (
+              <button className="secondary-button chatbot-browse-button" type="button" onClick={onBrowseMenu}>
+                Browse full menu
+              </button>
+            )}
+          </>
+        ) : null}
+
+        {chatStep === "review" ? (
+          <>
+            <article className="order-chat-message is-user">
+              <div className="order-chat-bubble">
+                <strong>Selected order</strong>
+                <p>{formatCartOrderSummary(cart)}</p>
+              </div>
+            </article>
+            <article className="order-chat-message is-bot">
+              <div className="order-chat-avatar" aria-hidden="true">
+                <Bot size={16} />
+              </div>
+              <div className="order-chat-bubble">
+                <strong>Please acknowledge the total</strong>
+                <p>Check the subtotal and total before payment.</p>
+              </div>
+            </article>
+            <div className="chatbot-action-card">
+              <CartTotalsSummary
+                cartCount={cartCount}
+                cartTotal={cartTotal}
+                hasPartialPricing={hasPartialPricing}
+              />
+              <div className="chatbot-action-row">
+                <button className="secondary-button" type="button" onClick={() => onChatStepChange("choose")}>
+                  Change items
+                </button>
+                <button
+                  className="primary-button"
+                  type="button"
+                  disabled={!cartCount}
+                  onClick={() => onChatStepChange("payment")}
+                >
+                  I acknowledge total
+                  <CheckCircle2 size={16} />
+                </button>
+              </div>
+            </div>
+          </>
+        ) : null}
+
+        {chatStep === "payment" ? (
+          <>
+            <article className="order-chat-message is-user">
+              <div className="order-chat-bubble">
+                <strong>Total acknowledged</strong>
+                <p>I am ready to pay {formatAmount(cartTotal, "SGD")}.</p>
+              </div>
+            </article>
+            <article className="order-chat-message is-bot">
+              <div className="order-chat-avatar" aria-hidden="true">
+                <Bot size={16} />
+              </div>
+              <div className="order-chat-bubble">
+                <strong>Make payment and upload proof</strong>
+                <p>Payment proof is required before the order is completed.</p>
+              </div>
+            </article>
+
+            <div className="chatbot-action-card">
+              <div className="customer-payment-card chatbot-payment-card">
+                <p className="section-label">how to pay</p>
+                <p className="panel-copy">{shopBranding.payment_instructions}</p>
+                <div className="customer-payment-options">
+                  {hasPayNowDetails ? (
+                    <div className="customer-payment-option">
+                      <div>
+                        <strong>PayNow</strong>
+                        {shopBranding.paynow_number.trim() ? (
+                          <span>{formatPaynowNumber(shopBranding.paynow_number)}</span>
+                        ) : (
+                          <span>Use the QR code below</span>
+                        )}
+                      </div>
+                      {shopBranding.paynow_qr_image ? (
+                        <PaymentQrPreview src={shopBranding.paynow_qr_image} />
+                      ) : (
+                        <span className="customer-payment-qr-unavailable">QR not available</span>
+                      )}
+                    </div>
+                  ) : null}
+                  {hasBankTransferDetails ? (
+                    <div className="customer-payment-option">
+                      <div>
+                        <strong>Bank transfer</strong>
+                        {shopBranding.bank_name.trim() ? <span>{shopBranding.bank_name}</span> : null}
+                        {shopBranding.bank_account_name.trim() ? (
+                          <span>{shopBranding.bank_account_name}</span>
+                        ) : null}
+                        {shopBranding.bank_account_number.trim() ? (
+                          <span>{shopBranding.bank_account_number}</span>
+                        ) : null}
+                      </div>
+                    </div>
+                  ) : null}
+                </div>
+                <p className="customer-payment-methods">Accepted: {acceptedPaymentMethods.join(" · ")}</p>
+              </div>
+
+              <p className="customer-payment-warning" role="note">
+                You must make payment first before placing your order. All payments are non-refundable - please
+                check your order before paying.
+              </p>
+
+              <label className="field-label" htmlFor="chatbot-order-notes">
+                Pickup or delivery notes (optional)
+              </label>
+              <textarea
+                id="chatbot-order-notes"
+                className="compact-textarea"
+                value={notes}
+                onChange={(event) => onNotesChange(event.target.value)}
+                placeholder="Example: Pick up at 6pm"
+              />
+
+              <label className="field-label" htmlFor="chatbot-payment-proof">
+                Payment proof
+              </label>
+              <p className="branding-helper-text customer-payment-proof-copy">
+                Upload a screenshot, photo, or PDF of your PayNow or bank transfer receipt.
+              </p>
+              {paymentProofImage ? (
+                <PaymentProofDraftPreview evidence={paymentProofImage} onRemove={onPaymentProofRemove} />
+              ) : null}
+              <label className="secondary-button payment-proof-upload-button" htmlFor="chatbot-payment-proof">
+                <Upload size={16} />
+                Upload payment proof
+              </label>
+              <input
+                id="chatbot-payment-proof"
+                className="visually-hidden"
+                type="file"
+                accept="image/*,application/pdf,.pdf"
+                onChange={(event) => {
+                  void onPaymentProofUpload(event.target.files?.[0] ?? null);
+                  event.target.value = "";
+                }}
+              />
+              {paymentProofNotice ? <p className="branding-helper-text">{paymentProofNotice}</p> : null}
+
+              <button
+                className="primary-button"
+                type="button"
+                disabled={!canSubmitOrder}
+                onClick={onSubmitOrder}
+              >
+                {placeOrderMutation.isPending ? <Loader2 className="spin" size={18} /> : <CheckCircle2 size={18} />}
+                Complete order · {formatAmount(cartTotal, "SGD")}
+              </button>
+
+              {placeOrderMutation.error ? <ErrorNotice message={placeOrderMutation.error.message} /> : null}
+            </div>
+          </>
+        ) : null}
+
+        {chatStep === "complete" ? (
+          <>
+            <article className="order-chat-message is-bot">
+              <div className="order-chat-avatar" aria-hidden="true">
+                <Bot size={16} />
+              </div>
+              <div className="order-chat-bubble">
+                <strong>Order complete</strong>
+                <p>Payment proof uploaded successfully. You can track this order in My orders.</p>
+              </div>
+            </article>
+            <div className="chatbot-action-card chatbot-complete-card">
+              <button className="primary-button" type="button" onClick={onViewOrders}>
+                View my orders
+                <ArrowRight size={16} />
+              </button>
+              <button className="secondary-button" type="button" onClick={() => onChatStepChange("choose")}>
+                Start another order
+              </button>
+            </div>
+          </>
+        ) : null}
+      </div>
+    </section>
   );
 }
 
@@ -1982,7 +2604,10 @@ function CustomerOrderCard({ order }: { order: ProcessedOrder }) {
   return (
     <article className="customer-order-card">
       <div className="customer-order-card-head">
-        <strong>{order.order_summary}</strong>
+        <div className="customer-order-card-title">
+          <strong>{order.order_summary}</strong>
+          <span className="order-id-chip">ID {formatOrderId(order)}</span>
+        </div>
         <div className="customer-order-card-badges">
           {isActiveOrder(order) ? <FulfillmentPill status="active" /> : null}
           <StatusPill status={order.payment_status} />
@@ -1997,7 +2622,131 @@ function CustomerOrderCard({ order }: { order: ProcessedOrder }) {
           <PaymentEvidenceDisplay evidence={order.evidence} />
         </div>
       ) : null}
+      <div className="customer-order-actions">
+        <OrderPdfButton order={order} />
+      </div>
     </article>
+  );
+}
+
+function OrderPdfButton({ order, compact = false }: { order: ProcessedOrder; compact?: boolean }) {
+  return (
+    <button
+      className={`secondary-button order-pdf-button${compact ? " is-compact" : ""}`}
+      type="button"
+      onClick={() => downloadOrderReceiptPdf(order)}
+    >
+      <Download size={compact ? 13 : 15} />
+      {compact ? "PDF" : "Download PDF"}
+    </button>
+  );
+}
+
+function PaymentQrPreview({ src }: { src: string }) {
+  const [isOpen, setIsOpen] = useStateValue(false);
+
+  return (
+    <div className="customer-payment-qr-preview">
+      <button
+        className="customer-payment-qr-button"
+        type="button"
+        aria-label="Open larger PayNow QR code"
+        onClick={() => setIsOpen(true)}
+      >
+        <img className="customer-payment-qr" src={src} alt="PayNow QR code" />
+        <span className="customer-payment-qr-helper">Click QR to enlarge</span>
+      </button>
+      {isOpen ? (
+        <PaymentProofImageModal
+          src={src}
+          onClose={() => setIsOpen(false)}
+          ariaLabel="Larger PayNow QR code"
+          alt="Larger PayNow QR code"
+          variant="qr"
+        />
+      ) : null}
+    </div>
+  );
+}
+
+function PaymentProofDraftPreview({
+  evidence,
+  onRemove
+}: {
+  evidence: string;
+  onRemove: () => void;
+}) {
+  const [isImageOpen, setIsImageOpen] = useStateValue(false);
+
+  return (
+    <div className="payment-proof-preview">
+      {isPaymentProofImage(evidence) ? (
+        <button
+          className="payment-proof-preview-action"
+          type="button"
+          onClick={() => setIsImageOpen(true)}
+        >
+          <img src={evidence} alt="Uploaded payment proof" />
+          <span>Open uploaded image</span>
+          <Maximize2 size={16} />
+        </button>
+      ) : isPaymentProofPdf(evidence) ? (
+        <a
+          className="payment-proof-preview-action payment-proof-preview-pdf"
+          href={evidence}
+          target="_blank"
+          rel="noreferrer"
+        >
+          <FileText size={22} />
+          <span>Open uploaded PDF</span>
+          <ExternalLink size={16} />
+        </a>
+      ) : (
+        <span>{evidence}</span>
+      )}
+      <button className="icon-button" type="button" aria-label="Remove payment proof" onClick={onRemove}>
+        <X size={16} />
+      </button>
+      {isImageOpen ? <PaymentProofImageModal src={evidence} onClose={() => setIsImageOpen(false)} /> : null}
+    </div>
+  );
+}
+
+function PaymentProofImageModal({
+  src,
+  onClose,
+  ariaLabel = "Full payment proof image",
+  alt = "Full payment proof",
+  variant = "proof"
+}: {
+  src: string;
+  onClose: () => void;
+  ariaLabel?: string;
+  alt?: string;
+  variant?: "proof" | "qr";
+}) {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (event.key === "Escape") {
+        onClose();
+      }
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [onClose]);
+
+  return createPortal(
+    <div className="payment-proof-modal" role="dialog" aria-modal="true" aria-label={ariaLabel}>
+      <button className="payment-proof-modal-backdrop" type="button" aria-label="Close preview" onClick={onClose} />
+      <div className={`payment-proof-modal-content${variant === "qr" ? " is-qr-preview" : ""}`}>
+        <button className="icon-button payment-proof-modal-close" type="button" aria-label="Close preview" onClick={onClose}>
+          <X size={18} />
+        </button>
+        <img src={src} alt={alt} />
+      </div>
+    </div>,
+    document.body
   );
 }
 
@@ -2029,6 +2778,14 @@ function CartTotalsSummary({
       ) : null}
     </div>
   );
+}
+
+function formatCartOrderSummary(cart: CartLine[]) {
+  if (!cart.length) {
+    return "No items selected yet.";
+  }
+
+  return cart.map((line) => `${line.quantity} x ${line.product.name}`).join(", ");
 }
 
 function CustomerProfilePanel({
@@ -2277,26 +3034,16 @@ function RequiredFieldLabel({
 
 function AdminView({
   adminCredential,
-  businessDescription,
-  setBusinessDescription,
-  generateMutation,
-  generatedWorkflow,
   orders,
   metrics,
   shopBranding,
-  onShopBrandingSaved,
-  onWorkflowDraftCleared
+  onShopBrandingSaved
 }: {
   adminCredential: AuthCredential;
-  businessDescription: string;
-  setBusinessDescription: React.Dispatch<React.SetStateAction<string>>;
-  generateMutation: UseMutationResult<WorkflowGeneration, Error, WorkflowGenerateInput>;
-  generatedWorkflow: WorkflowGeneration | null;
   orders: ProcessedOrder[];
   metrics: ReturnType<typeof buildMetrics>;
   shopBranding: ShopBranding;
   onShopBrandingSaved: () => void;
-  onWorkflowDraftCleared: () => void;
 }) {
   const [activeTab, setActiveTab] = useStateValue<AdminTab>(getInitialAdminTab());
   const tabs: Array<{ id: AdminTab; label: string; icon: React.ReactNode }> = [
@@ -2348,15 +3095,7 @@ function AdminView({
         ) : null}
 
         {activeTab === "rules" ? (
-          <OrderRulesPanel
-            adminCredential={adminCredential}
-            businessDescription={businessDescription}
-            setBusinessDescription={setBusinessDescription}
-            generateMutation={generateMutation}
-            generatedWorkflow={generatedWorkflow}
-            shopBranding={shopBranding}
-            onWorkflowDraftCleared={onWorkflowDraftCleared}
-          />
+          <OrderRulesPanel shopBranding={shopBranding} />
         ) : null}
 
         {activeTab === "inventory" ? (
@@ -2497,7 +3236,361 @@ function CapturePeriodMetrics({ summary }: { summary: ReturnType<typeof buildCap
   );
 }
 
-function OrderRulesPanel({
+function OrderRulesPanel({ shopBranding }: { shopBranding: ShopBranding }) {
+  const paymentMethods = buildAcceptedPaymentMethods(shopBranding);
+  const orderFlowSteps = buildStaticOrderFlowSteps(paymentMethods);
+  const [activeFlowStepIndex, setActiveFlowStepIndex] = useStateValue(0);
+  const [isFlowPlaying, setIsFlowPlaying] = useStateValue(true);
+  const activeFlowStep = orderFlowSteps[activeFlowStepIndex] ?? orderFlowSteps[0];
+
+  useEffect(() => {
+    if (!isFlowPlaying) {
+      return undefined;
+    }
+
+    const timer = window.setInterval(() => {
+      setActiveFlowStepIndex((current) => (current + 1) % orderFlowSteps.length);
+    }, 3600);
+
+    return () => window.clearInterval(timer);
+  }, [isFlowPlaying, orderFlowSteps.length, setActiveFlowStepIndex]);
+
+  function selectFlowStep(index: number) {
+    setActiveFlowStepIndex(index);
+    setIsFlowPlaying(false);
+  }
+
+  function moveFlowStep(direction: -1 | 1) {
+    setActiveFlowStepIndex((current) => (current + direction + orderFlowSteps.length) % orderFlowSteps.length);
+  }
+
+  return (
+    <section className="panel workflow-panel static-order-flow-panel" aria-labelledby="workflow-heading">
+      <div className="panel-heading">
+        <div>
+          <p className="section-label">order rules</p>
+          <h2 id="workflow-heading">Order flow</h2>
+        </div>
+        <Workflow size={20} className="accent-icon" />
+      </div>
+
+      <p className="panel-copy">
+        Rules are now used to show the ordering path, not to build a custom workflow. Inventory, branding, payment
+        settings, and checkout are the source of truth.
+      </p>
+
+      <div className="static-order-flow-simulator">
+        <ol className="static-order-flow-list" aria-label="Current customer order flow">
+          {orderFlowSteps.map((step, index) => {
+            const isActive = index === activeFlowStepIndex;
+            const isDone = index < activeFlowStepIndex;
+
+            return (
+              <li key={step.title}>
+                <button
+                  className={[
+                    "static-order-flow-step",
+                    isActive ? "is-active" : "",
+                    isDone ? "is-done" : ""
+                  ]
+                    .filter(Boolean)
+                    .join(" ")}
+                  type="button"
+                  aria-current={isActive ? "step" : undefined}
+                  onClick={() => selectFlowStep(index)}
+                >
+                  <span className="static-order-flow-index">{index + 1}</span>
+                  <div>
+                    <span className="static-order-flow-state">
+                      {isActive ? "Now showing" : isDone ? "Replicated" : "Next"}
+                    </span>
+                    <strong>{step.title}</strong>
+                    <p>{step.detail}</p>
+                  </div>
+                </button>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="static-order-flow-stage">
+          <div className="static-order-flow-stage-header">
+            <div>
+              <span className="muted-label">Customer side</span>
+              <strong>{activeFlowStep.previewTitle}</strong>
+            </div>
+            <span>
+              Step {activeFlowStepIndex + 1} / {orderFlowSteps.length}
+            </span>
+          </div>
+
+          <StaticOrderFlowCustomerScreen
+            paymentMethods={paymentMethods}
+            shopBranding={shopBranding}
+            step={activeFlowStep}
+          />
+
+          <div className="static-order-flow-controls" aria-label="Order flow playback controls">
+            <button
+              className="secondary-button"
+              type="button"
+              title="Previous step"
+              onClick={() => {
+                setIsFlowPlaying(false);
+                moveFlowStep(-1);
+              }}
+            >
+              <ArrowLeft size={16} />
+              Previous
+            </button>
+            <button
+              className="secondary-button"
+              type="button"
+              title={isFlowPlaying ? "Pause path" : "Play path"}
+              onClick={() => setIsFlowPlaying((current) => !current)}
+            >
+              {isFlowPlaying ? <Pause size={16} /> : <Play size={16} />}
+              {isFlowPlaying ? "Pause" : "Play"}
+            </button>
+            <button
+              className="primary-button"
+              type="button"
+              title="Next step"
+              onClick={() => {
+                setIsFlowPlaying(false);
+                moveFlowStep(1);
+              }}
+            >
+              Next
+              <ArrowRight size={16} />
+            </button>
+          </div>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+type StaticOrderFlowStepId = "channel" | "items" | "total" | "confirmation" | "payment" | "operations";
+type StaticOrderFlowStep = {
+  id: StaticOrderFlowStepId;
+  title: string;
+  detail: string;
+  previewTitle: string;
+  previewStatus: string;
+};
+
+function buildStaticOrderFlowSteps(paymentMethods: string[]): StaticOrderFlowStep[] {
+  const paymentMethodLabel = paymentMethods.join(" or ");
+
+  return [
+    {
+      id: "channel",
+      title: "Customer chooses an order channel",
+      detail: "They can use the direct menu or the guided order chatbot. Both paths use the same published inventory.",
+      previewTitle: "Order channel selection",
+      previewStatus: "Menu and chatbot available"
+    },
+    {
+      id: "items",
+      title: "Products and quantities are selected",
+      detail: "The menu and chatbot read from Inventory, so the shop does not need to describe products again.",
+      previewTitle: "Published inventory is used",
+      previewStatus: "Customer is building cart"
+    },
+    {
+      id: "total",
+      title: "Subtotal and total are shown",
+      detail: "The customer reviews item quantities, subtotal, and total before moving to payment.",
+      previewTitle: "Checkout total review",
+      previewStatus: "Total is visible before payment"
+    },
+    {
+      id: "confirmation",
+      title: "Customer acknowledges the total",
+      detail: "The chatbot requires an explicit confirmation before showing payment instructions.",
+      previewTitle: "Explicit total confirmation",
+      previewStatus: "Waiting for customer confirmation"
+    },
+    {
+      id: "payment",
+      title: "Payment proof is uploaded",
+      detail: `The customer pays by ${paymentMethodLabel} and uploads a receipt before the order can be placed.`,
+      previewTitle: "Payment and proof upload",
+      previewStatus: "Receipt is required"
+    },
+    {
+      id: "operations",
+      title: "Order lands in operations",
+      detail: "The completed order appears in My orders for the customer and Orders for the admin.",
+      previewTitle: "Order is created for ops",
+      previewStatus: "Customer and admin can track it"
+    }
+  ];
+}
+
+function StaticOrderFlowCustomerScreen({
+  paymentMethods,
+  shopBranding,
+  step
+}: {
+  paymentMethods: string[];
+  shopBranding: ShopBranding;
+  step: StaticOrderFlowStep;
+}) {
+  const shopName = shopBranding.business_name || "Customer storefront";
+  const paymentInstruction = shopBranding.payment_instructions || "Pay using the saved shop payment settings, then upload proof.";
+  const paymentMethodLabel = paymentMethods.join(" or ");
+  const payNowLabel = shopBranding.paynow_number || "PayNow number from Branding";
+  const bankLabel =
+    [shopBranding.bank_name, shopBranding.bank_account_name, shopBranding.bank_account_number].filter(Boolean).join(" / ") ||
+    "Bank transfer details from Branding";
+
+  let screenContent: React.ReactNode;
+
+  if (step.id === "channel") {
+    screenContent = (
+      <div className="static-customer-choice-grid">
+        <div className="static-customer-choice is-recommended">
+          <Bot size={20} />
+          <div>
+            <strong>Guided order chatbot</strong>
+            <span>Prompts the customer through the same published menu.</span>
+          </div>
+          <b>Recommended</b>
+        </div>
+        <div className="static-customer-choice">
+          <ShoppingBag size={20} />
+          <div>
+            <strong>Direct menu</strong>
+            <span>Lets the customer browse inventory and add items manually.</span>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (step.id === "items") {
+    screenContent = (
+      <div className="static-customer-menu-preview">
+        <div className="static-customer-product is-selected">
+          <div>
+            <span>Inventory item</span>
+            <strong>Egg tarts</strong>
+          </div>
+          <div className="static-customer-stepper">
+            <Minus size={14} />
+            <b>2</b>
+            <Plus size={14} />
+          </div>
+        </div>
+        <div className="static-customer-product is-selected">
+          <div>
+            <span>Inventory item</span>
+            <strong>Bandung</strong>
+          </div>
+          <div className="static-customer-stepper">
+            <Minus size={14} />
+            <b>1</b>
+            <Plus size={14} />
+          </div>
+        </div>
+      </div>
+    );
+  } else if (step.id === "total") {
+    screenContent = (
+      <div className="static-customer-summary">
+        <span>Order summary</span>
+        <div>
+          <strong>Egg tarts x 2</strong>
+          <b>{formatAmount(7.2, "SGD")}</b>
+        </div>
+        <div>
+          <strong>Bandung x 1</strong>
+          <b>{formatAmount(2.8, "SGD")}</b>
+        </div>
+        <div className="is-total">
+          <strong>Total</strong>
+          <b>{formatAmount(10, "SGD")}</b>
+        </div>
+      </div>
+    );
+  } else if (step.id === "confirmation") {
+    screenContent = (
+      <div className="static-customer-chat-preview">
+        <div className="order-chat-message is-assistant">
+          <div className="order-chat-avatar">
+            <Bot size={16} />
+          </div>
+          <div className="order-chat-bubble">
+            <strong>Confirm your order total</strong>
+            <p>Your total is {formatAmount(10, "SGD")}. Payment instructions appear after confirmation.</p>
+          </div>
+        </div>
+        <div className="order-chat-message is-user">
+          <div className="order-chat-bubble">
+            <strong>Customer</strong>
+            <p>Confirm {formatAmount(10, "SGD")}</p>
+          </div>
+        </div>
+      </div>
+    );
+  } else if (step.id === "payment") {
+    screenContent = (
+      <div className="static-customer-payment-preview">
+        <div className="static-customer-payment-card">
+          <span>Payment method</span>
+          <strong>{paymentMethodLabel}</strong>
+          <p>{paymentInstruction}</p>
+        </div>
+        <div className="static-customer-payment-grid">
+          <div>
+            <span>PayNow</span>
+            <strong>{payNowLabel}</strong>
+          </div>
+          <div>
+            <span>Bank transfer</span>
+            <strong>{bankLabel}</strong>
+          </div>
+        </div>
+        <div className="static-customer-upload">
+          <Upload size={18} />
+          <span>Upload payment screenshot or receipt</span>
+        </div>
+      </div>
+    );
+  } else {
+    screenContent = (
+      <div className="static-customer-ops-preview">
+        <div className="workflow-fulfilled-badge">
+          <CheckCircle2 size={20} />
+          <span>Order placed</span>
+        </div>
+        <div className="static-customer-summary">
+          <span>Visible in both workspaces</span>
+          <div>
+            <strong>My orders</strong>
+            <b>Customer tracking</b>
+          </div>
+          <div>
+            <strong>Admin orders</strong>
+            <b>Operations queue</b>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <article className="static-customer-screen" aria-live="polite">
+      <div className="static-customer-screen-bar">
+        <span>{shopName}</span>
+        <strong>{step.previewStatus}</strong>
+      </div>
+      <div className="static-customer-screen-body">{screenContent}</div>
+    </article>
+  );
+}
+
+function LegacyOrderRulesPanel({
   adminCredential,
   businessDescription,
   setBusinessDescription,
@@ -3465,8 +4558,6 @@ function ShopBrandingPanel({
     },
     onSuccess: (saved) => {
       setDraft(saved);
-      setSavedNotice("Customer storefront and payment details saved.");
-      onSaved();
     }
   });
 
@@ -3474,6 +4565,18 @@ function ShopBrandingPanel({
   const hasBankTransferDetails = Boolean(
     draft.bank_name.trim() && draft.bank_account_name.trim() && draft.bank_account_number.trim()
   );
+
+  async function persistBrandingDraft(nextDraft: ShopBranding, savedMessage = "Customer storefront and payment details saved.") {
+    if (!isBrandingDraftReadyToSave(nextDraft)) {
+      throw new Error("Complete all storefront fields before saving.");
+    }
+
+    const saved = await saveMutation.mutateAsync(buildBrandingSavePayload(nextDraft));
+    setDraft(saved);
+    setSavedNotice(savedMessage);
+    onSaved();
+    return saved;
+  }
 
   async function handlePaynowQrUpload(file: File | null) {
     setQrNotice(null);
@@ -3490,16 +4593,28 @@ function ShopBrandingPanel({
     const qrText = await readQrTextFromImage(file);
     const extractedPaynowNumber = qrText ? extractPayNowNumberFromQrText(qrText) : null;
 
-    setDraft((current) => ({
-      ...current,
+    const nextDraft: ShopBranding = {
+      ...draft,
       paynow_qr_image: imageData,
-      paynow_number: extractedPaynowNumber ?? current.paynow_number
-    }));
-    setQrNotice(
-      extractedPaynowNumber
-        ? `PayNow number ${formatPaynowNumber(extractedPaynowNumber)} detected from QR.`
-        : "QR uploaded. Enter the PayNow number manually if it was not detected."
-    );
+      paynow_number: extractedPaynowNumber ?? draft.paynow_number
+    };
+
+    setDraft(nextDraft);
+
+    try {
+      await persistBrandingDraft(nextDraft, "PayNow QR uploaded and saved.");
+      setQrNotice(
+        extractedPaynowNumber
+          ? `PayNow number ${formatPaynowNumber(extractedPaynowNumber)} detected from QR and saved.`
+          : "PayNow QR uploaded and saved."
+      );
+    } catch (cause) {
+      setQrNotice(
+        extractedPaynowNumber
+          ? `PayNow number ${formatPaynowNumber(extractedPaynowNumber)} detected from QR. Complete all storefront fields, then save.`
+          : "PayNow QR uploaded. Complete all storefront fields, then save."
+      );
+    }
   }
 
   async function handleGeneratePaynowQr() {
@@ -3521,8 +4636,17 @@ function ShopBrandingPanel({
         return;
       }
 
-      setDraft((current) => ({ ...current, paynow_qr_image: imageData }));
-      setQrNotice(`PayNow QR generated for ${formatPaynowNumber(paynowNumber)}.`);
+      const nextDraft: ShopBranding = { ...draft, paynow_qr_image: imageData };
+      setDraft(nextDraft);
+
+      try {
+        await persistBrandingDraft(nextDraft, "PayNow QR saved.");
+        setQrNotice(`PayNow QR generated and saved for ${formatPaynowNumber(paynowNumber)}.`);
+      } catch {
+        setQrNotice(
+          `PayNow QR generated for ${formatPaynowNumber(paynowNumber)}. Complete all storefront fields, then click Save storefront settings.`
+        );
+      }
     } catch {
       setQrNotice("Could not generate the PayNow QR. Try again.");
     } finally {
@@ -3673,9 +4797,20 @@ function ShopBrandingPanel({
                     className="icon-button"
                     type="button"
                     aria-label="Remove PayNow QR"
+                    disabled={saveMutation.isPending}
                     onClick={() => {
-                      setDraft((current) => ({ ...current, paynow_qr_image: "" }));
-                      setQrNotice("PayNow QR removed.");
+                      void (async () => {
+                        const nextDraft: ShopBranding = { ...draft, paynow_qr_image: "" };
+                        setDraft(nextDraft);
+                        setQrNotice(null);
+
+                        try {
+                          await persistBrandingDraft(nextDraft, "PayNow QR removed.");
+                          setQrNotice("PayNow QR removed.");
+                        } catch {
+                          setQrNotice("PayNow QR removed from preview. Complete all storefront fields, then save.");
+                        }
+                      })();
                     }}
                   >
                     <X size={16} />
@@ -3686,7 +4821,7 @@ function ShopBrandingPanel({
                 <button
                   className="secondary-button qr-upload-button"
                   type="button"
-                  disabled={isGeneratingQr}
+                  disabled={isGeneratingQr || saveMutation.isPending}
                   onClick={() => {
                     void handleGeneratePaynowQr();
                   }}
@@ -3785,18 +4920,8 @@ function ShopBrandingPanel({
           }
           onClick={() => {
             setSavedNotice(null);
-            saveMutation.mutate({
-              business_name: draft.business_name.trim(),
-              mark_letter: draft.mark_letter.trim(),
-              tagline: draft.tagline.trim(),
-              description: draft.description.trim(),
-              payment_instructions: draft.payment_instructions.trim(),
-              paynow_number: draft.paynow_number.trim(),
-              paynow_qr_image: draft.paynow_qr_image,
-              bank_name: draft.bank_name.trim(),
-              bank_account_name: draft.bank_account_name.trim(),
-              bank_account_number: draft.bank_account_number.trim(),
-              footer_note: draft.footer_note.trim()
+            void persistBrandingDraft(draft).catch(() => {
+              // saveMutation.error surfaces in the panel footer
             });
           }}
         >
@@ -3932,6 +5057,32 @@ function InventoryPanel({
     }));
   }
 
+  async function updateNewProductImage(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      updateNewProductDraft("image_url", await productImageFileToDataUrl(file));
+      setDraftError(null);
+    } catch (cause) {
+      setDraftError(cause instanceof Error ? cause.message : "Could not read product image");
+    }
+  }
+
+  async function updateEditProductImage(file: File | null) {
+    if (!file) {
+      return;
+    }
+
+    try {
+      updateEditProductDraft("image_url", await productImageFileToDataUrl(file));
+      setDraftError(null);
+    } catch (cause) {
+      setDraftError(cause instanceof Error ? cause.message : "Could not read product image");
+    }
+  }
+
   function addProduct(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     try {
@@ -4052,6 +5203,34 @@ function InventoryPanel({
             placeholder="Price"
             aria-label="New product unit price"
           />
+          <div className="inventory-image-field">
+            <ProductImageDisplay
+              imageUrl={newProductDraft.image_url}
+              name={newProductDraft.name || "New product"}
+              className="inventory-image-preview"
+            />
+            <div className="inventory-image-controls">
+              <label className="secondary-button inventory-image-upload-button" htmlFor="new-product-image">
+                <Upload size={15} />
+                {newProductDraft.image_url ? "Change photo" : "Add photo"}
+              </label>
+              <input
+                id="new-product-image"
+                className="visually-hidden"
+                type="file"
+                accept="image/*"
+                onChange={(event) => {
+                  void updateNewProductImage(event.target.files?.[0] ?? null);
+                  event.target.value = "";
+                }}
+              />
+              {newProductDraft.image_url ? (
+                <button className="text-link" type="button" onClick={() => updateNewProductDraft("image_url", "")}>
+                  Remove photo
+                </button>
+              ) : null}
+            </div>
+          </div>
           <button
             className="secondary-button inventory-add-button"
             type="submit"
@@ -4067,6 +5246,7 @@ function InventoryPanel({
             <thead>
               <tr>
                 <th>Product</th>
+                <th>Photo</th>
                 <th>Category</th>
                 <th>Price</th>
                 <th>Status</th>
@@ -4093,6 +5273,47 @@ function InventoryPanel({
                           />
                         ) : (
                           <strong>{product.name}</strong>
+                        )}
+                      </td>
+                      <td data-label="Photo">
+                        {isEditing ? (
+                          <div className="inventory-image-field is-table-field">
+                            <ProductImageDisplay
+                              imageUrl={editProductDraft.image_url}
+                              name={editProductDraft.name || product.name}
+                              className="inventory-image-preview"
+                            />
+                            <div className="inventory-image-controls">
+                              <label
+                                className="secondary-button inventory-image-upload-button"
+                                htmlFor={`edit-product-image-${product.id}`}
+                              >
+                                <Upload size={15} />
+                                {editProductDraft.image_url ? "Change" : "Upload"}
+                              </label>
+                              <input
+                                id={`edit-product-image-${product.id}`}
+                                className="visually-hidden"
+                                type="file"
+                                accept="image/*"
+                                onChange={(event) => {
+                                  void updateEditProductImage(event.target.files?.[0] ?? null);
+                                  event.target.value = "";
+                                }}
+                              />
+                              {editProductDraft.image_url ? (
+                                <button className="text-link" type="button" onClick={() => updateEditProductDraft("image_url", "")}>
+                                  Remove
+                                </button>
+                              ) : null}
+                            </div>
+                          </div>
+                        ) : (
+                          <ProductImageDisplay
+                            imageUrl={product.image_url}
+                            name={product.name}
+                            className="inventory-image-preview is-readonly"
+                          />
                         )}
                       </td>
                       <td data-label="Category">
@@ -4194,7 +5415,7 @@ function InventoryPanel({
                 })
               ) : (
                 <tr>
-                  <td colSpan={5}>{inventoryQuery.isLoading ? "Loading inventory..." : "No inventory products yet."}</td>
+                  <td colSpan={6}>{inventoryQuery.isLoading ? "Loading inventory..." : "No inventory products yet."}</td>
                 </tr>
               )}
             </tbody>
@@ -4938,13 +6159,14 @@ function OrderTable({
   completingOrderId?: string | null;
   onCompleteOrder?: (orderId: string) => void;
 }) {
-  const columnCount = showStatus ? (onCompleteOrder ? 7 : 6) : 5;
+  const columnCount = showStatus ? (onCompleteOrder ? 8 : 7) : 6;
 
   return (
     <div className="table-wrap">
       <table>
         <thead>
           <tr>
+            <th>Order ID</th>
             <th>Captured</th>
             <th>Order</th>
             <th>Customer</th>
@@ -4957,7 +6179,10 @@ function OrderTable({
         <tbody>
           {orders.length ? (
             orders.map((order, index) => (
-              <tr key={`${order.source_input}-${index}`}>
+              <tr key={order.id ?? `${order.source_input}-${index}`}>
+                <td data-label="Order ID">
+                  <code className="order-id-code">{formatOrderId(order)}</code>
+                </td>
                 <td data-label="Captured">
                   <strong>{formatCaptureDate(order.created_at)}</strong>
                   <span>{formatCaptureTime(order.created_at)}</span>
@@ -4965,6 +6190,7 @@ function OrderTable({
                 <td data-label="Order">
                   <strong>{order.order_summary}</strong>
                   <span>{sumOrderQuantity(order)} item batch</span>
+                  <OrderPdfButton order={order} compact />
                 </td>
                 <td data-label="Customer">{order.customer_name ?? order.customer_handle ?? "Manual entry"}</td>
                 <td data-label="Amount">{formatAmount(order.total_amount, order.currency)}</td>
@@ -5225,6 +6451,7 @@ function createInventoryDraft(product?: InventoryProduct): InventoryProductDraft
     name: product?.name ?? "",
     category: product?.category ?? "",
     unit_price: product?.unit_price === null || product?.unit_price === undefined ? "" : String(product.unit_price),
+    image_url: product?.image_url ?? "",
     is_active: product?.is_active ?? true
   };
 }
@@ -5235,6 +6462,7 @@ function inventoryProductFromDraft(draft: InventoryProductDraft): InventoryProdu
       name: draft.name,
       category: draft.category,
       unit_price: draft.unit_price,
+      image_url: draft.image_url,
       is_active: draft.is_active
     }
   ])[0];
@@ -5268,6 +6496,7 @@ function parseInventoryUpload(rawText: string, fileName: string): InventoryProdu
         name: record.name,
         category: record.category || "inventory",
         unit_price: record.unit_price || null,
+        image_url: record.image_url || record.image || "",
         is_active: record.is_active || true
       };
     });
@@ -5280,6 +6509,7 @@ function normalizeInventoryProducts(products: InventoryProductInput[]): Inventor
     name: String(product.name ?? "").trim(),
     category: String(product.category ?? "").trim() || "inventory",
     unit_price: product.unit_price === null || product.unit_price === undefined || product.unit_price === "" ? null : Number(product.unit_price),
+    image_url: String(product.image_url ?? "").trim(),
     is_active: normalizeInventoryActive(product.is_active)
   }));
 
@@ -5514,17 +6744,152 @@ function formatAmount(value: number | null, currency: string) {
   }).format(value);
 }
 
+function formatOrderId(order: ProcessedOrder) {
+  return order.id ?? "Not assigned";
+}
+
+function getOrderCustomerLabel(order: ProcessedOrder) {
+  return order.customer_name ?? order.customer_handle ?? "Manual entry";
+}
+
+function downloadOrderReceiptPdf(order: ProcessedOrder) {
+  const blob = createOrderReceiptPdf(order);
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  link.href = url;
+  link.download = `${formatOrderId(order).replace(/[^a-z0-9_-]+/gi, "-")}-receipt.pdf`;
+  document.body.append(link);
+  link.click();
+  link.remove();
+  window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+}
+
+function createOrderReceiptPdf(order: ProcessedOrder) {
+  const receiptLines = buildOrderReceiptLines(order).flatMap((line) => wrapPdfTextLine(line, 86));
+  const streamLines = [
+    "BT",
+    "/F1 18 Tf",
+    "50 800 Td",
+    "(zorder order receipt) Tj",
+    "/F1 10 Tf"
+  ];
+
+  receiptLines.forEach((line) => {
+    streamLines.push("0 -18 Td");
+    if (line) {
+      streamLines.push(`(${escapePdfText(line)}) Tj`);
+    }
+  });
+
+  streamLines.push("ET");
+  const stream = streamLines.join("\n");
+  const objects = [
+    "<< /Type /Catalog /Pages 2 0 R >>",
+    "<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+    "<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
+    "<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    `<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`
+  ];
+  let pdf = "%PDF-1.4\n";
+  const offsets = [0];
+
+  objects.forEach((object, index) => {
+    offsets.push(pdf.length);
+    pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
+  });
+
+  const xrefOffset = pdf.length;
+  pdf += `xref\n0 ${objects.length + 1}\n`;
+  pdf += "0000000000 65535 f \n";
+  offsets.slice(1).forEach((offset) => {
+    pdf += `${String(offset).padStart(10, "0")} 00000 n \n`;
+  });
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
+
+  return new Blob([pdf], { type: "application/pdf" });
+}
+
+function buildOrderReceiptLines(order: ProcessedOrder) {
+  const itemLines = order.items.length
+    ? order.items.map((item) => {
+        const price = item.unit_price === null ? "price not set" : formatAmount(item.unit_price * item.quantity, order.currency);
+        return `- ${item.quantity} x ${item.item_name} (${price})`;
+      })
+    : ["- No item details captured"];
+
+  return [
+    `Order ID: ${formatOrderId(order)}`,
+    `Placed: ${formatCaptureDate(order.created_at)} ${formatCaptureTime(order.created_at)}`,
+    `Customer: ${getOrderCustomerLabel(order)}`,
+    `Order: ${order.order_summary}`,
+    `Payment status: ${order.payment_status}`,
+    `Fulfillment: ${isActiveOrder(order) ? "In progress" : "Completed"}`,
+    `Total: ${formatAmount(order.total_amount, order.currency)}`,
+    "",
+    "Items:",
+    ...itemLines,
+    "",
+    "Payment proof: uploaded in zorder"
+  ];
+}
+
+function wrapPdfTextLine(line: string, maxLength: number) {
+  if (!line || line.length <= maxLength) {
+    return [line];
+  }
+
+  const chunks: string[] = [];
+  let remaining = line;
+
+  while (remaining.length > maxLength) {
+    const breakpoint = remaining.lastIndexOf(" ", maxLength);
+    const nextIndex = breakpoint > 24 ? breakpoint : maxLength;
+    chunks.push(remaining.slice(0, nextIndex).trim());
+    remaining = remaining.slice(nextIndex).trim();
+  }
+
+  if (remaining) {
+    chunks.push(remaining);
+  }
+
+  return chunks;
+}
+
+function escapePdfText(value: string) {
+  return value
+    .replace(/[^\x20-\x7E]/g, "?")
+    .replace(/\\/g, "\\\\")
+    .replace(/\(/g, "\\(")
+    .replace(/\)/g, "\\)");
+}
+
 function PaymentEvidenceDisplay({ evidence }: { evidence: string }) {
+  const [isImageOpen, setIsImageOpen] = useStateValue(false);
+
   if (!evidence.trim()) {
     return <>—</>;
   }
 
   if (isPaymentProofImage(evidence)) {
     return (
-      <div className="payment-proof-display">
+      <>
+      <button className="payment-proof-display payment-proof-display-button" type="button" onClick={() => setIsImageOpen(true)}>
         <img src={evidence} alt="Payment proof" className="payment-proof-thumbnail" />
         <span>Payment proof uploaded</span>
-      </div>
+        <Maximize2 size={16} />
+      </button>
+      {isImageOpen ? <PaymentProofImageModal src={evidence} onClose={() => setIsImageOpen(false)} /> : null}
+      </>
+    );
+  }
+
+  if (isPaymentProofPdf(evidence)) {
+    return (
+      <a className="payment-proof-display payment-proof-display-link" href={evidence} target="_blank" rel="noreferrer">
+        <FileText size={20} />
+        <span>Payment proof PDF uploaded</span>
+        <ExternalLink size={16} />
+      </a>
     );
   }
 
@@ -5533,6 +6898,10 @@ function PaymentEvidenceDisplay({ evidence }: { evidence: string }) {
 
 function isPaymentProofImage(value: string) {
   return value.trim().startsWith("data:image/");
+}
+
+function isPaymentProofPdf(value: string) {
+  return value.trim().toLowerCase().startsWith("data:application/pdf");
 }
 
 function formatPaynowNumber(value: string) {
@@ -5544,6 +6913,40 @@ function formatPaynowNumber(value: string) {
   }
 
   return value.trim();
+}
+
+function buildBrandingSavePayload(source: ShopBranding): ShopBranding {
+  return {
+    business_name: source.business_name.trim(),
+    mark_letter: source.mark_letter.trim(),
+    tagline: source.tagline.trim(),
+    description: source.description.trim(),
+    payment_instructions: source.payment_instructions.trim(),
+    paynow_number: source.paynow_number.trim(),
+    paynow_qr_image: source.paynow_qr_image,
+    bank_name: source.bank_name.trim(),
+    bank_account_name: source.bank_account_name.trim(),
+    bank_account_number: source.bank_account_number.trim(),
+    footer_note: source.footer_note.trim()
+  };
+}
+
+function isBrandingDraftReadyToSave(source: ShopBranding) {
+  const payload = buildBrandingSavePayload(source);
+  const hasPayNowDetails = Boolean(payload.paynow_number || payload.paynow_qr_image);
+  const hasBankTransferDetails = Boolean(
+    payload.bank_name && payload.bank_account_name && payload.bank_account_number
+  );
+
+  return Boolean(
+    payload.business_name &&
+      payload.mark_letter &&
+      payload.tagline &&
+      payload.description &&
+      payload.payment_instructions &&
+      hasPayNowDetails &&
+      hasBankTransferDetails
+  );
 }
 
 function buildAcceptedPaymentMethods(shopBranding: ShopBranding) {
@@ -5571,6 +6974,36 @@ function fileToDataUrl(file: File) {
     reader.onerror = () => reject(reader.error ?? new Error("Could not read file"));
     reader.readAsDataURL(file);
   });
+}
+
+async function paymentProofFileToDataUrl(file: File) {
+  const isImage = file.type.startsWith("image/");
+  const isPdf = file.type === "application/pdf" || file.name.toLowerCase().endsWith(".pdf");
+
+  if (!isImage && !isPdf) {
+    throw new Error("Upload an image or PDF file for your payment proof.");
+  }
+
+  const dataUrl = isImage ? await imageFileToDataUrl(file) : await fileToDataUrl(file);
+
+  if (dataUrl.length > maxPaymentProofPayloadLength) {
+    throw new Error("Payment proof is too large. Upload a smaller image or PDF.");
+  }
+
+  return dataUrl;
+}
+
+async function productImageFileToDataUrl(file: File) {
+  if (!file.type.startsWith("image/")) {
+    throw new Error("Upload an image file for the product photo.");
+  }
+
+  const dataUrl = await imageFileToDataUrl(file);
+  if (dataUrl.length > maxProductImagePayloadLength) {
+    throw new Error("Product image is too large. Upload a smaller image.");
+  }
+
+  return dataUrl;
 }
 
 async function imageFileToDataUrl(file: File) {
@@ -5742,6 +7175,9 @@ function getInitialRoute(): AppRoute {
   if (path.startsWith("/tech-stack")) {
     return "tech-stack";
   }
+  if (path.startsWith("/why-zo-computer")) {
+    return "why-zo-computer";
+  }
   if (path.startsWith("/admin")) {
     return "admin";
   }
@@ -5757,6 +7193,9 @@ function routePath(route: AppRoute) {
   }
   if (route === "tech-stack") {
     return "/tech-stack";
+  }
+  if (route === "why-zo-computer") {
+    return "/why-zo-computer";
   }
   return route === "admin" ? "/admin" : "/user";
 }

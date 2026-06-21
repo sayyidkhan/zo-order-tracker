@@ -98,6 +98,7 @@ const inventoryProductSchema = z.object({
   name: z.string().trim().min(1).max(80),
   category: z.string().trim().min(1).max(80).default("inventory"),
   unit_price: z.coerce.number().nonnegative().nullable().default(null),
+  image_url: z.string().trim().max(1_500_000).default(""),
   is_active: z
     .preprocess((value) => {
       if (typeof value === "string") {
