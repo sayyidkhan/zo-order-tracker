@@ -7,8 +7,11 @@
     "install:app": "cd backend && npm install --include=dev --no-package-lock && cd ../frontend && npm install --include=dev --no-package-lock",
     "build:frontend": "cd frontend && npm install --include=dev --no-package-lock && npm run build",
     "build": "npm run clear-cache && npm run build:frontend",
-    "start": "npm run install:app && npm run build && node deploy-server.js",
-    "dev": "bun run clear-cache && NODE_ENV=development bun run --hot server.ts"
+    "start": "bash deployment/service-entrypoint.sh",
+    "dev": "bun run clear-cache && NODE_ENV=development bun run --hot server.ts",
+    "deploy:zo": "bash deployment/deploy.sh",
+    "restart:service": "bash deployment/restart-service.sh",
+    "health:service": "bash deployment/health-check.sh"
   },
   "dependencies": {
     "@types/bun": "1.2.21",

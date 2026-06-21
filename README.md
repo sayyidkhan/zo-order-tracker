@@ -168,6 +168,63 @@ The default model is:
 GPT_MODEL=gpt-5.5
 ```
 
+## Zo Deployment
+
+The live Zo app is a managed long-running service.
+
+That means `git pull` by itself is not a deployment step. Pulling updates the files in the repo, but the public site can still serve the old frontend build and old server process until the service is rebuilt and restarted.
+
+Use this command when you want new code to go live on Zo:
+
+```bash
+npm run deploy:zo
+```
+
+What it does:
+
+1. checks that the repo is clean
+2. fetches and fast-forwards the current branch
+3. installs dependencies
+4. rebuilds the frontend bundle
+5. restarts the running Zo service
+6. waits for the live health check to pass
+
+Useful variants:
+
+```bash
+npm run deploy:zo -- --skip-pull
+npm run deploy:zo -- --skip-pull --allow-dirty
+npm run restart:service
+npm run health:service
+```
+
+When to use them:
+
+- `npm run deploy:zo` deploys the latest committed code from the remote branch
+- `npm run deploy:zo -- --skip-pull` deploys the code already checked out locally
+- `npm run deploy:zo -- --skip-pull --allow-dirty` deploys local uncommitted changes for testing
+- `npm run restart:service` only restarts the live service
+- `npm run health:service` only checks the public health endpoint
+
+Deployment scripts live in `deployment/`.
+Deployment skill for future AI sessions: `Skills/zo-order-tracker-deploy/SKILL.md`.
+The production service startup path is `deployment/service-entrypoint.sh`, which reuses the existing build when the current commit is already built and rebuilds automatically when it is not.
+
+Recommended Zo workflow:
+
+```bash
+git pull
+npm run deploy:zo
+```
+
+Or just run:
+
+```bash
+npm run deploy:zo
+```
+
+if you want one command to both pull and deploy.
+
 ## Useful Commands
 
 Run backend tests:

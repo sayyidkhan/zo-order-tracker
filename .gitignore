@@ -58,3 +58,6 @@ next-env.d.ts
 
 # local chat/upload screenshots in repo root
 /image-*.png
+
+# deployment runtime state
+/deployment/state/
