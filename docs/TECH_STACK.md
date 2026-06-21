@@ -137,7 +137,7 @@ ZORDER_BACKEND_PORT=4000
 
 - Auth is simple username + 6-digit PIN for MVP/demo use.
 - Customer checkout uses uploaded proof, not payment gateway verification.
-- Messaging-channel ingestion is not part of the current MVP.
+- Messaging-channel ingestion is not part of the current MVP. It is a future enhancement for users who still prefer to send or receive orders through chat.
 - TanStack Router is installed but not the active router.
 - Tailwind/shadcn are not used in the shipped frontend.
 - Hono exists in the root Zo wrapper path, but the app API is Express.
@@ -150,4 +150,4 @@ Only revisit these after the current workflow is stable:
 - add production auth and merchant accounts
 - move from local SQLite to hosted Postgres for multi-tenant scale
 - add exports and reporting jobs
-- add messaging-channel ingestion that reuses the same workflow runner
+- add chat/message-channel ingestion that reuses the same workflow runner after the order tracker and payment-proof flow are stable

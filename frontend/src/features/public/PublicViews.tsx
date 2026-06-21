@@ -60,10 +60,10 @@ export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => voi
       <header className="intro-hero">
         <BrandMark businessName="zorder" markLetter="Z" onHomeClick={() => onNavigate("user")} />
         <p className="section-label">order tracking for home businesses</p>
-        <h1 className="intro-headline">Turn messy customer notes into trackable orders.</h1>
+        <h1 className="intro-headline">Put messy orders and manual payment tracking in one place.</h1>
         <p className="intro-lead">
-          Home business owners juggle production, replies, and payment checks. zorder gives you one calm workspace to
-          classify paid order notes, track sales captures by date, and see what needs review.
+          Home business owners juggle orders, production, and payment proof. zorder gives you one calm workspace to
+          publish products, collect payment evidence, and see what needs review.
         </p>
         <div className="intro-actions">
           <button className="primary-button" type="button" onClick={() => onNavigate("user")}>
@@ -82,14 +82,14 @@ export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => voi
       <div className="intro-grid">
         <section className="intro-card intro-problem" aria-labelledby="intro-problem-heading">
           <p className="section-label">the problem</p>
-          <h2 id="intro-problem-heading">Orders arrive as messy messages</h2>
+          <h2 id="intro-problem-heading">Orders and payments get hard to track</h2>
           <p>
-            Customers send orders through chat, DMs, and informal notes. Details are mixed with small talk, payment
-            proof is easy to miss, and follow-up lives in your head or scattered notes.
+            Small sellers can take orders quickly, but the tracking becomes messy once payment proof, fulfillment
+            status, and customer follow-up live in different places.
           </p>
           <ul className="intro-list">
-            <li>Hard to tell paid captures from unclear notes at a glance</li>
-            <li>Manual sorting slows down production and replies</li>
+            <li>Orders are easy to miss when the list lives in notes or memory</li>
+            <li>Payment tracking stays manual after PayNow or bank transfer</li>
             <li>Full CRM tools add admin work you do not need</li>
           </ul>
         </section>
@@ -98,14 +98,13 @@ export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => voi
           <p className="section-label">the solution</p>
           <h2 id="intro-solution-heading">One lightweight tracker for daily orders</h2>
           <p>
-            Paste or enter a customer note, run it through your shop&apos;s rules, review the extracted order, and
-            capture paid sales on a simple dashboard. Rules are deterministic JSON — same input, same result every
-            time.
+            Publish a simple menu, collect payment proof, and keep every order visible from one admin dashboard. The
+            workflow stays practical for owner-operated shops that do not need a full commerce stack yet.
           </p>
           <ul className="intro-list">
-            <li>Extract order summary, amount, and payment evidence</li>
-            <li>Show why a rule matched before saving anything</li>
-            <li>Route missing payment evidence into follow-up instead of sales</li>
+            <li>Show products, prices, and payment instructions clearly</li>
+            <li>Capture payment evidence before an order is created</li>
+            <li>Track active and completed orders from the merchant view</li>
           </ul>
         </section>
       </div>
@@ -116,11 +115,11 @@ export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => voi
         <ol className="intro-step-list">
           <li>
             <strong>Set up rules</strong>
-            <span>Describe your shop and define how messy notes should be classified.</span>
+            <span>Configure your shop, products, and payment instructions.</span>
           </li>
           <li>
             <strong>Process orders</strong>
-            <span>Paste customer messages and confirm the structured preview.</span>
+            <span>Let customers choose products, upload payment proof, and place orders.</span>
           </li>
           <li>
             <strong>Capture paid sales</strong>
@@ -131,7 +130,8 @@ export function IntroView({ onNavigate }: { onNavigate: (route: AppRoute) => voi
 
       <footer className="intro-footer">
         <p>
-          AI can help draft workflow rules during setup. Daily order processing stays deterministic.{" "}
+          Chat intake can be added later for customers who still prefer messaging. Today, zorder focuses on the tracker:
+          orders, payment proof, and merchant review.{" "}
           <button className="text-link" type="button" onClick={() => onNavigate("tech-stack")}>
             View the tech stack
           </button>
@@ -150,9 +150,8 @@ export function TechStackView({ onNavigate }: { onNavigate: (route: AppRoute) =>
           <p className="section-label">technical architecture</p>
           <h1 className="intro-headline">zorder tech stack</h1>
           <p className="intro-lead">
-            A fast hackathon MVP for home businesses: enter messy order notes, classify them with deterministic JSON
-            workflows, and persist orders and inventory in SQLite while keeping the path open for Zo hosting and later
-            Telegram automation.
+            A fast hackathon MVP for home businesses: publish products, capture payment proof, track orders in SQLite,
+            and keep the path open for future chat/message-channel intake after the core workflow is stable.
           </p>
           <div className="tech-actions">
             <button className="primary-button" type="button" onClick={() => onNavigate("user")}>

@@ -4,6 +4,15 @@ zorder is a simple storefront and paid-order tracker for small businesses.
 
 It helps a merchant publish products, show payment instructions, capture payment proof, and track order fulfillment without adopting a full commerce stack.
 
+## Problem Statement
+
+The current product focuses on two pains:
+
+- orders can be messy and hard to track
+- payment tracking is manual when customers pay through PayNow or bank transfer outside the app
+
+Chat ordering is an enhancement path, not the core MVP. Some customers still prefer to send or receive orders through chat, so future chat intake should feed the same order tracker instead of becoming a separate chatbot product.
+
 ## Users
 
 | User | Need |

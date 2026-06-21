@@ -26,13 +26,23 @@ The current MVP is not a full commerce platform, CRM, or payment gateway. It giv
 
 ## Problem
 
-Small sellers often run ordering through informal messages and manual payment checks. This creates repeated operational work:
+Small sellers need a simple way to manage paid orders before they are ready for a full commerce platform.
 
-- menus and prices are resent manually
-- payment screenshots are mixed with chat history
+The current problem statement is:
+
+- orders can be messy and hard to track
+- payment tracking is manual because PayNow and bank transfer happen outside zorder
+
+This creates repeated operational work:
+
 - customers ask for status after paying
-- product availability is hard to keep synchronized
+- payment proof must be reviewed by the merchant
+- product availability and order status are hard to keep synchronized
 - full storefront, CRM, and POS tools are too heavy for early or small operations
+
+### Enhancement Boundary
+
+Users may still prefer to send or receive orders through chat. That is an enhancement path, not the current core product. Future WhatsApp, Instagram, Telegram, or marketplace ingestion should feed the same order tracker and payment-proof workflow.
 
 ## Goals
 
@@ -49,7 +59,7 @@ Small sellers often run ordering through informal messages and manual payment ch
 - No payment processing or automatic payment verification.
 - No refunds, invoices, accounting, or payout reconciliation.
 - No production-grade auth, RBAC, tenant billing, or merchant onboarding.
-- No WhatsApp, Instagram, Telegram, or marketplace ingestion in the current MVP.
+- No WhatsApp, Instagram, Telegram, or marketplace ingestion in the current MVP. These are future intake channels, not current core scope.
 - No runtime LLM dependency for normal order processing.
 - No full CRM pipeline, lead management, or sales automation.
 
@@ -68,7 +78,7 @@ Small sellers often run ordering through informal messages and manual payment ch
 3. Customer signs in or creates a user account with username + 6-digit PIN.
 4. Customer chooses an order method:
    - browse menu and checkout
-   - guided chatbot-style ordering flow
+   - guided ordering flow inside zorder
 5. Customer selects active products from the merchant inventory.
 6. Customer reviews cart total and optional notes.
 7. Customer pays externally through PayNow or bank transfer using merchant instructions.

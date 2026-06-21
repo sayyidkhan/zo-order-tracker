@@ -110,7 +110,7 @@ For the hackathon narrative, Zo is not only a host:
 - it provides a practical place for future automation jobs
 - it fits the story of a small owner-operated workflow system
 
-Do not imply that Zo currently provides multi-tenant auth, payment verification, or messaging ingestion for zorder.
+Do not imply that Zo currently provides multi-tenant auth, payment verification, or messaging ingestion for zorder. Messaging ingestion is only a future enhancement for users who still prefer to send or receive orders through chat.
 
 ## Future Infra Options
 
@@ -120,4 +120,4 @@ Only consider these after the current app is stable:
 - separate background worker service
 - production database migration
 - payment provider integration
-- messaging-channel ingestion that reuses the same workflow runner
+- chat/message-channel ingestion that reuses the same workflow runner after the core tracker is stable

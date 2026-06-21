@@ -4,6 +4,8 @@ zorder workflows are deterministic JSON decision trees. They are used for raw te
 
 The runtime schema file is `backend/workflows/workflow-schema.json`.
 
+The product problem stays focused on messy order tracking and manual payment tracking. Raw text and future chat intake are enhancement paths that should feed the same deterministic tracker instead of becoming a separate chat product.
+
 ## Workflow Shape
 
 ```json

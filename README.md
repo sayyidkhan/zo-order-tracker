@@ -9,6 +9,15 @@ Think of it as:
 - a place to collect PayNow or bank-transfer proof
 - a lightweight order list so the merchant knows what to prepare
 
+## Problem Statement
+
+zorder is built around two current pains:
+
+- orders can be messy and hard to track
+- payment tracking is manual because PayNow and bank transfer happen outside the app
+
+Chat is an enhancement, not the current core product. Many customers still prefer to send or receive orders in chat, so a future version can let chat orders feed into the same tracker. Today, the product focuses on making orders and payment proof visible in one place.
+
 Live demo:
 
 ```text
@@ -166,7 +175,7 @@ zorder does not currently:
 
 - verify PayNow or bank transfers automatically
 - process card payments
-- send WhatsApp or Telegram messages
+- send or receive WhatsApp, Telegram, Instagram, or other chat orders
 - manage delivery routes
 - provide production-grade multi-merchant auth
 
@@ -393,7 +402,7 @@ Useful docs:
 
 - `docs/SPEC.md`
 - `docs/USER_JOURNEY.md`
-- `docs/tech-stack.md`
+- `docs/TECH_STACK.md`
 - `docs/ZO_INFRA.md`
 
 ## Useful Commands

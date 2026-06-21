@@ -7,6 +7,15 @@ zorder has two working app surfaces:
 
 Both use username + 6-digit PIN auth in the MVP. Public visitors can also view `/intro`, `/tech-stack`, and `/why-zo-computer`.
 
+## Product Problem
+
+zorder currently focuses on two pains:
+
+- orders can be messy and hard to track
+- payment tracking is manual because customers pay outside the app
+
+Chat ordering is only an enhancement path. If users still prefer to send or receive orders through chat, that future input should feed this same journey instead of replacing the structured checkout.
+
 ## Customer Journey
 
 ```mermaid
@@ -30,7 +39,7 @@ flowchart TD
 | Storefront landing | Uses merchant branding, tagline, description, payment methods, and menu preview. |
 | Login/signup | Username + 6-digit PIN. Signup creates a customer user only. |
 | Menu | Shows active products grouped by category. |
-| Guided order | Chatbot-style UI that guides product, quantity, payment, and completion. |
+| Guided order | Structured helper UI that guides product, quantity, payment, and completion inside zorder. |
 | Checkout | Shows cart, notes, payment instructions, payment proof upload, and place order button. |
 | My orders | Splits active orders and history. |
 | Profile | Saves required profile fields and lets non-demo users change PIN. |

@@ -2,15 +2,17 @@
 
 ## Direction
 
-zorder should become the lightweight operating system for small sellers who start with informal ordering but need more structure before they are ready for a full commerce platform.
+zorder should become the lightweight operating system for small sellers whose orders and payment proof are messy to track before they are ready for a full commerce platform.
 
 The product should compound from:
 
-1. structured customer ordering
-2. payment proof capture
-3. order and fulfillment tracking
+1. order and fulfillment tracking
+2. manual payment proof capture
+3. structured customer ordering
 4. sales visibility
 5. optional automation channels
+
+The current problem statement is simple: orders can be messy and hard to track, and payment tracking is manual. Chat-based ordering stays as an enhancement path because many users still prefer to send or receive orders through chat.
 
 ## Current Wedge
 
@@ -39,4 +41,4 @@ Small sellers do not need a generic AI assistant first. They need a reliable ope
 - Better reporting and exports.
 - Production auth and merchant account separation.
 - Optional setup-only AI improvements.
-- Future message-channel ingestion that reuses the same workflow runner.
+- Future chat/message-channel ingestion that reuses the same workflow runner after the core tracker is stable.

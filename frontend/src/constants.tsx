@@ -134,10 +134,10 @@ export const techArchitectureSteps = [
 
 export const techSourceDocs = [
   "docs/SPEC.md",
-  "docs/tech-stack.md",
+  "docs/TECH_STACK.md",
   "docs/ZO_INFRA.md",
   "docs/USER_JOURNEY.md",
-  "docs/workflow-schema.md"
+  "docs/WORKFLOW_SCHEMA.md"
 ];
 export const maxPaymentProofPayloadLength = 1_450_000;
 export const maxProductImagePayloadLength = 850_000;
