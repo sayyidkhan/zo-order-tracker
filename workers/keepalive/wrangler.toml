@@ -1,0 +1,9 @@
+name = "zo-order-tracker-keepalive"
+main = "src/index.ts"
+compatibility_date = "2025-01-01"
+
+[triggers]
+crons = ["*/5 * * * *"]
+
+[vars]
+BASE_URL = "https://zo-order-tracker-shab.zocomputer.io"
