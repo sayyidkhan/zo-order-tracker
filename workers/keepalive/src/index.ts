@@ -132,11 +132,43 @@ async function runKeepalive(env: Env) {
 }
 
 export default {
-  async fetch(_request: Request, env: Env) {
-    const result = await runKeepalive(env);
+  async fetch(request: Request, env: Env, ctx: ExecutionContext) {
+    const url = new URL(request.url);
 
-    return Response.json(result, {
-      status: result.ok ? 200 : 502,
+    if (url.pathname === "/run") {
+      ctx.waitUntil(runKeepalive(env));
+
+      return Response.json({
+        accepted: true,
+        message: "Keepalive sweep started in the background.",
+      }, {
+        status: 202,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    if (url.pathname === "/probe") {
+      const baseUrl = env.BASE_URL ?? DEFAULT_BASE_URL;
+      const result = await pingEndpoint(baseUrl, "/api/health", "application/json");
+
+      return Response.json(result, {
+        status: result.ok ? 200 : 502,
+        headers: {
+          "Cache-Control": "no-store",
+        },
+      });
+    }
+
+    return Response.json({
+      ok: true,
+      worker: "zo-order-tracker-keepalive",
+      baseUrl: env.BASE_URL ?? DEFAULT_BASE_URL,
+      schedule: "*/5 * * * *",
+      manualRunPath: "/run",
+      probePath: "/probe",
+    }, {
       headers: {
         "Cache-Control": "no-store",
       },
