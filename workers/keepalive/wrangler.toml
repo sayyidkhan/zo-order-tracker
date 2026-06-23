@@ -7,3 +7,8 @@ crons = ["*/5 * * * *"]
 
 [vars]
 BASE_URL = "https://zo-order-tracker-shab.zocomputer.io"
+
+[[d1_databases]]
+binding = "LOG_DB"
+database_name = "zo-order-tracker-keepalive-logs"
+database_id = "af21e217-b364-438e-84a0-eb4dbfa1c4ec"
