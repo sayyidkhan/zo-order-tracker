@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const workflowDir = path.resolve(__dirname, "..", "workflows");
+const workflowDir = process.env.ZORDER_WORKFLOW_DIR || path.resolve(__dirname, "..", "workflows");
 
 const paymentHints = {
   paid: ["paid", "paynow", "bank transfer", "transferred", "transfer done", "sent", "receipt"]

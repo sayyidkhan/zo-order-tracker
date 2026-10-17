@@ -24,7 +24,7 @@ import { formatProfileDisplayName, getUserProfile, saveUserProfile } from "./use
 import { loadWorkflow, processOrder, runWorkflow } from "./workflow-runner.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const workflowDir = path.resolve(__dirname, "..", "workflows");
+const workflowDir = process.env.ZORDER_WORKFLOW_DIR || path.resolve(__dirname, "..", "workflows");
 const app = express();
 const port = Number(process.env.PORT ?? 4000);
 const userCredential = {
@@ -635,6 +635,6 @@ app.use((error, _req, res, _next) => {
   });
 });
 
-app.listen(port, () => {
+app.listen(port, process.env.HOST || "127.0.0.1", () => {
   console.log(`zorder API listening on http://localhost:${port}`);
 });

@@ -1,6 +1,18 @@
 # One-Push Zo Deployment
 
-This repo gives `zo-order-tracker` one stable deployment path on Zo. After the one-time env setup, a pushed commit should be enough for `npm run deploy:zo` on Zo to pull, rebuild, restart, and verify the live service.
+## Garden of Zo deployment (sayyidkhan)
+
+This checkout lives at `/home/workspace/Start/garden-of-zo/zo-order-tracker`. Public product URL: `https://public-apps-sayyidkhan.zocomputer.io/zorder/`; customer page: `/zorder/user`; merchant page: `/zorder/admin`.
+
+Garden's router forwards `/zorder` without stripping the prefix to the managed process `zo-order-tracker` on loopback 8836. Its internal API listens on 8837. Build with `APP_BASE_PATH=/zorder npm run build`; run `node deploy-server.js` with `ZORDER_ENV_FILE=/home/workspace/Data/zorder/runtime.env`. Restart through Zo's service management tools after a successful build. Do not run the inherited restart/deploy/reset scripts against this installation: they target the original host or broad process patterns.
+
+Initial setup: install app dependencies, run `node deployment/setup-garden.js`, then build and register the process. Setup is idempotent: it preserves existing credentials and data. Runtime SQLite, users, profiles, workflows and private credentials live outside source under `/home/workspace/Data/zorder`. Owner login details are in that folder's `access.md`; never publish or commit it. Payment details start empty. This deployment retains the MVP PIN login and requires merchant setup before accepting real payments. Optional AI workflow generation remains disabled.
+
+Verify `/zorder/api/health`, customer sign-up/login, merchant login, protected APIs, frontend assets and deep-link refresh through the gateway. Garden catalogue metadata belongs in the sibling platform checkout; route configuration belongs in the sibling router checkout.
+
+## Standalone Zo installations
+
+The sections below describe the inherited standalone deployment scripts, not Garden's managed process. After a standalone installation's one-time env setup, `npm run deploy:zo` can pull, rebuild, restart and verify its service. Set `APP_URL` to that installation's URL; the default health-check target is Garden's `/zorder` URL.
 
 ## Problem It Solves
 

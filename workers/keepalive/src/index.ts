@@ -17,7 +17,7 @@ interface Env {
   LOG_DB?: D1Database;
 }
 
-const DEFAULT_BASE_URL = "https://zo-order-tracker-shab.zocomputer.io";
+const DEFAULT_BASE_URL = "https://public-apps-sayyidkhan.zocomputer.io/zorder";
 const USER_AGENT = "zo-order-tracker-keepalive/1.0";
 
 const PAGE_ENDPOINTS = [

@@ -7,12 +7,14 @@ import { dirname } from "node:path";
 import { loadEnvFiles } from "./env-loader.js";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-loadEnvFiles([resolve(__dirname, ".env"), resolve(__dirname, "backend/.env")]);
+loadEnvFiles([process.env.ZORDER_ENV_FILE, resolve(__dirname, ".env"), resolve(__dirname, "backend/.env")]);
 
 const frontendDist = resolve(__dirname, "frontend/dist");
 const backendDir = resolve(__dirname, "backend");
 const port = Number(process.env.PORT || 8080);
 const backendPort = Number(process.env.ZORDER_BACKEND_PORT || 4001);
+const basePath = (process.env.APP_BASE_PATH || "").replace(/\/+$/, "");
+const host = process.env.HOST || "127.0.0.1";
 
 const backend = spawn("bash", ["-lc", `PORT=${backendPort} NODE_ENV=production npm run start`], {
   cwd: backendDir,
@@ -79,13 +81,20 @@ function proxyToBackend(req, res) {
 
 const server = createServer((req, res) => {
   const url = new URL(req.url || "/", `http://${req.headers.host || "localhost"}`);
+  if (basePath && url.pathname !== basePath && !url.pathname.startsWith(`${basePath}/`)) {
+    res.writeHead(404);
+    res.end("Not found");
+    return;
+  }
+  url.pathname = url.pathname.slice(basePath.length) || "/";
+  req.url = `${url.pathname}${url.search}`;
 
   if (url.pathname === "/api/health") {
     const healthReq = httpRequest({ hostname: "127.0.0.1", port: backendPort, path: "/health", method: "GET" }, (healthRes) => {
       const chunks = [];
       healthRes.on("data", (chunk) => chunks.push(chunk));
       healthRes.on("end", () => {
-        res.writeHead(200, { "content-type": "application/json; charset=utf-8" });
+        res.writeHead(healthRes.statusCode === 200 ? 200 : 503, { "content-type": "application/json; charset=utf-8" });
         res.end(JSON.stringify({
           ok: healthRes.statusCode === 200,
           service: "zo-order-tracker",
@@ -124,8 +133,8 @@ const server = createServer((req, res) => {
   serveFile(res, join(frontendDist, "index.html"));
 });
 
-server.listen(port, "0.0.0.0", () => {
-  console.log(`zo-order-tracker listening on http://0.0.0.0:${port}`);
+server.listen(port, host, () => {
+  console.log(`zo-order-tracker listening on http://${host}:${port}${basePath}`);
   console.log(`proxying backend on http://127.0.0.1:${backendPort}`);
 });
 

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-APP_URL="${APP_URL:-https://zo-order-tracker-shab.zocomputer.io}"
+APP_URL="${APP_URL:-https://public-apps-sayyidkhan.zocomputer.io/zorder}"
+APP_URL="${APP_URL%/}"
 MAX_ATTEMPTS="${MAX_ATTEMPTS:-30}"
 SLEEP_SECONDS="${SLEEP_SECONDS:-2}"
 

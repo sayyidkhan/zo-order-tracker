@@ -6,4 +6,4 @@ const __dirname = dirname(fileURLToPath(import.meta.url));
 const backendDir = resolve(__dirname, "..");
 const rootDir = resolve(backendDir, "..");
 
-loadEnvFiles([resolve(rootDir, ".env"), resolve(backendDir, ".env")]);
+loadEnvFiles([process.env.ZORDER_ENV_FILE, resolve(rootDir, ".env"), resolve(backendDir, ".env")]);

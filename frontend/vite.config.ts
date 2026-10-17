@@ -1,7 +1,8 @@
 import react from "@vitejs/plugin-react";
-import { defineConfig } from "vite";
+import { defineConfig, loadEnv } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ mode }) => ({
+  base: `${(process.env.APP_BASE_PATH ?? loadEnv(mode, "..", "").APP_BASE_PATH ?? "").replace(/\/+$/, "")}/`,
   envDir: "..",
   plugins: [react()],
   server: {
@@ -17,4 +18,4 @@ export default defineConfig({
       "/config": "http://localhost:4000"
     }
   }
-});
+}));

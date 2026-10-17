@@ -7,7 +7,7 @@ import "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const backendDir = path.resolve(__dirname, "..");
-const dataDir = path.resolve(__dirname, "..", "data");
+const dataDir = process.env.ZORDER_DATA_DIR || path.resolve(__dirname, "..", "data");
 const defaultDbPath = path.join(dataDir, "zorder.sqlite");
 const dbPath = resolveDatabasePath(process.env.DATABASE_URL ?? `file:${defaultDbPath}`);
 const legacyConfigPath = path.resolve(__dirname, "..", "config", "shop.json");

@@ -1,5 +1,7 @@
 # zorder
 
+Live on Garden of Zo: [Open zorder](https://public-apps-sayyidkhan.zocomputer.io/zorder/). Operators should follow the Garden deployment section in [DEPLOYMENT.md](DEPLOYMENT.md) and [AGENTS.md](AGENTS.md).
+
 zorder helps a small merchant take paid orders without setting up a full ecommerce store.
 
 Think of it as:
@@ -21,7 +23,7 @@ Chat is an enhancement, not the current core product. Many customers still prefe
 Live demo:
 
 ```text
-https://zo-order-tracker-shab.zocomputer.io
+https://public-apps-sayyidkhan.zocomputer.io/zorder/
 ```
 
 60-second demo video:
@@ -34,7 +36,7 @@ https://youtu.be/qhZGS4obUps
 
 If you are the merchant using an already deployed zorder app, start at **Merchant Setup**.
 
-If you are the person deploying zorder to Zo, start at **One-Push Zo Deployment**.
+If you are the person maintaining the Garden deployment, start at [DEPLOYMENT.md](DEPLOYMENT.md). The standalone Zo deployment instructions below are for separate installations.
 
 If you are an AI assistant helping with deployment, use the skill file:
 
@@ -71,16 +73,12 @@ Use this after the app is already deployed.
 1. Open the admin page:
 
 ```text
-https://zo-order-tracker-shab.zocomputer.io/admin
+https://public-apps-sayyidkhan.zocomputer.io/zorder/admin
 ```
 
 2. Sign in with the admin username and 6-digit PIN.
 
-Demo admin login:
-
-```text
-admin / 654321
-```
+The Garden owner credentials are stored privately in `/home/workspace/Data/zorder/access.md`. Published demo credentials do not work on this deployment.
 
 3. Open **Branding**.
 
@@ -101,14 +99,14 @@ Add products manually, or upload a CSV/JSON product list.
 5. Open the customer page:
 
 ```text
-https://zo-order-tracker-shab.zocomputer.io/user
+https://public-apps-sayyidkhan.zocomputer.io/zorder/user
 ```
 
 6. Check that the customer sees the right shop name, menu, prices, and payment instructions.
 
-7. Share the `/user` link with customers.
+7. Share the `/zorder/user` link with customers.
 
-8. When customers place orders, review them from `/admin`.
+8. When customers place orders, review them from `/zorder/admin`.
 
 Important: zorder stores payment proof for the merchant to review. It does not confirm that the money really arrived in the bank or PayNow account.
 
@@ -116,7 +114,7 @@ Important: zorder stores payment proof for the merchant to review. It does not c
 
 Customers use zorder like this:
 
-1. Open `/user`.
+1. Open `/zorder/user`.
 2. Sign in or sign up.
 3. Pick products from the menu.
 4. Pay outside the app by PayNow or bank transfer.
@@ -124,17 +122,13 @@ Customers use zorder like this:
 6. Place the order.
 7. Track active and completed orders from the customer page.
 
-Demo customer login:
-
-```text
-user / 123456
-```
+Customers can create an account. The Garden owner's test customer credentials are also in the private access file.
 
 ## Merchant Accounts
 
 The MVP uses simple username + 6-digit PIN login.
 
-The default customer and admin accounts are configured in the repo-root `.env` file:
+Garden accounts are configured in the private `/home/workspace/Data/zorder/runtime.env` file. For a separate local installation, the sample customer and admin accounts are configured in the repo-root `.env` file:
 
 ```env
 ZORDER_USER_USERNAME=user
@@ -189,7 +183,7 @@ It is currently best for demos, pilots, hackathons, and small owner-operated wor
 
 ## One-Push Zo Deployment
 
-This section is for the person deploying the app to Zo.
+This section describes standalone Zo installations. Garden uses its existing gateway and a managed process; follow [DEPLOYMENT.md](DEPLOYMENT.md) for that deployment. Do not run the standalone restart or factory-reset scripts against Garden's installation.
 
 The goal: after the first setup, deployment should be:
 

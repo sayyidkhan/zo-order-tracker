@@ -2,7 +2,7 @@ import { StrictMode, useEffect, useLayoutEffect, useState } from "react";
 import { QueryClient, QueryClientProvider, useQuery, useQueryClient } from "@tanstack/react-query";
 import { LogOut } from "lucide-react";
 import type { AppRoute, AuthAccess, AuthCredential, AuthMode, AuthRole, AuthState } from "./types";
-import { defaultShopBranding, routeHeadings } from "./constants";
+import { appBasePath, defaultShopBranding, routeHeadings } from "./constants";
 import { AdminView } from "./features/admin/AdminView";
 import { LoginPage, PublicPageTopbar, IntroView, TechStackView, UserShopLanding, WhyZoComputerView } from "./features/public/PublicViews";
 import { UserView } from "./features/user/UserView";
@@ -77,9 +77,9 @@ function Workspace() {
   }, [setActiveRoute, setLoginMode, setLoginTarget]);
 
   useLayoutEffect(() => {
-    const path = window.location.pathname;
+    const path = window.location.pathname.slice(appBasePath.length) || "/";
     if (path.startsWith("/user/login")) {
-      window.history.replaceState({}, "", "/login?role=user");
+      window.history.replaceState({}, "", `${routePath("login")}?role=user`);
       setActiveRoute("login");
       setLoginTarget("user");
       return;
@@ -87,17 +87,17 @@ function Workspace() {
 
     if (activeRoute === "login") {
       if (auth.user) {
-        window.history.replaceState({}, "", "/user");
+        window.history.replaceState({}, "", routePath("user"));
         setActiveRoute("user");
       } else if (auth.admin) {
-        window.history.replaceState({}, "", "/admin");
+        window.history.replaceState({}, "", routePath("admin"));
         setActiveRoute("admin");
       }
       return;
     }
 
     if (activeRoute === "admin" && !auth.admin) {
-      window.history.replaceState({}, "", "/login?role=admin");
+      window.history.replaceState({}, "", `${routePath("login")}?role=admin`);
       setActiveRoute("login");
       setLoginTarget("admin");
     }
@@ -115,7 +115,7 @@ function Workspace() {
     if (mode === "sign-up") params.set("mode", "sign-up");
     if (target) params.set("role", target);
     const query = params.toString();
-    window.history.pushState({}, "", query ? `/login?${query}` : "/login");
+    window.history.pushState({}, "", `${routePath("login")}${query ? `?${query}` : ""}`);
     setActiveRoute("login");
   }
 

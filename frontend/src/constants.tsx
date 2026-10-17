@@ -46,7 +46,8 @@ import {
 import type { AuthRole, ShopBranding, TechStackSection, WorkflowSetupStepId } from "./types";
 
 const configuredApiBase = import.meta.env.VITE_API_BASE_URL?.trim();
-export const apiBase = configuredApiBase ? configuredApiBase.replace(/\/$/, "") : "";
+export const appBasePath = import.meta.env.BASE_URL.replace(/\/$/, "");
+export const apiBase = configuredApiBase ? configuredApiBase.replace(/\/$/, "") : appBasePath;
 
 export const sampleMessages = [
   "Hi I want 12 egg tarts and 2 bandung, paid by PayNow",

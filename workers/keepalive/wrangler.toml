@@ -6,7 +6,7 @@ compatibility_date = "2025-01-01"
 crons = ["*/5 * * * *"]
 
 [vars]
-BASE_URL = "https://zo-order-tracker-shab.zocomputer.io"
+BASE_URL = "https://public-apps-sayyidkhan.zocomputer.io/zorder"
 
 [[d1_databases]]
 binding = "LOG_DB"

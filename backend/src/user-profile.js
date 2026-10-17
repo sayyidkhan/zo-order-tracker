@@ -1,9 +1,10 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const profilesPath = path.join(path.resolve(__dirname, "..", "data"), "user-profiles.json");
+const profilesPath = path.join(process.env.ZORDER_DATA_DIR || path.resolve(__dirname, "..", "data"), "user-profiles.json");
 
 const emptyProfile = {
   first_name: "",

@@ -10,7 +10,7 @@ Submission page: https://ambassador.zo.space/build-challenge
 
 **Project Name:** ZOrder
 
-**Live Link:** https://zo-order-tracker-shab.zocomputer.io/
+**Live Link:** https://public-apps-sayyidkhan.zocomputer.io/zorder/
 
 **60-Second Video:** https://youtu.be/qhZGS4obUps
 

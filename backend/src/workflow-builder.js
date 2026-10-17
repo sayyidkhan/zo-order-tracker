@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { validateWorkflow } from "./workflow-runner.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const workflowDir = path.resolve(__dirname, "..", "workflows");
+const workflowDir = process.env.ZORDER_WORKFLOW_DIR || path.resolve(__dirname, "..", "workflows");
 const defaultOpenAiEndpoint = "https://api.openai.com/v1/responses";
 
 export const workflowGenerationSchema = {

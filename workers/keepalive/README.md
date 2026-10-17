@@ -2,6 +2,8 @@
 
 Cloudflare Worker that keeps the deployed app warm and stores each sweep in D1 for queryable history.
 
+The configured app target is `https://public-apps-sayyidkhan.zocomputer.io/zorder`. The worker is deployed separately from the Garden app; a Git push updates its source configuration but does not deploy the Cloudflare Worker.
+
 ## Endpoints
 
 - `GET /` - worker metadata and available paths.

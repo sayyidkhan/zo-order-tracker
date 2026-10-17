@@ -1,102 +1,25 @@
 ---
 name: zo-order-tracker-deploy
-description: Deploy the zo-order-tracker app on Zo from one pushed commit by pulling the latest code when appropriate, rebuilding the frontend, restarting the managed service, and verifying the live health check.
+description: Deploy zo-order-tracker on Garden of Zo by building its prefixed frontend, restarting the managed app process and checking the public health endpoint.
 compatibility: Created for Zo Computer
 metadata:
   author: shab.zo.computer
 ---
 
-Use this skill when working inside the `zo-order-tracker` repository and the task is about making new code go live on Zo, keeping one-push deployment working, fixing a stale live site after a pull, or checking whether the managed service has restarted correctly.
+Use for deployment, stale builds or health checks of this repository's Garden instance.
 
-Repository root:
+Read `AGENTS.md` and the Garden section of `DEPLOYMENT.md` first.
 
-```text
-/home/workspace/projects/zo-order-tracker
-```
+- Checkout: `/home/workspace/Start/garden-of-zo/zo-order-tracker`.
+- Public product: `https://public-apps-sayyidkhan.zocomputer.io/zorder/`.
+- Customer: `/zorder/user`; merchant: `/zorder/admin`.
+- Health: `https://public-apps-sayyidkhan.zocomputer.io/zorder/api/health`.
+- Managed process: `zo-order-tracker` (`svc_pbxvzCVE9KQ`), running `node deploy-server.js`.
+- Runtime: loopback app port 8836 and internal API port 8837, loaded through `ZORDER_ENV_FILE=/home/workspace/Data/zorder/runtime.env`.
+- All live data, workflow files and credentials remain under `/home/workspace/Data/zorder`, outside Git.
 
-Primary deployment command:
+Install dependencies with `npm run install:app`. Build with `APP_BASE_PATH=/zorder npm run build`, then restart only the app through Zo's managed service tools. Run `npm run health:service` and confirm the JSON reports a healthy backend; verify customer and merchant navigation stays under `/zorder`.
 
-```bash
-cd /home/workspace/projects/zo-order-tracker
-npm run deploy:zo
-```
+Preserve the gateway URL, visibility, prefix, runtime data and credentials. Garden catalogue metadata and routing live in separate sibling repositories. Do not use the inherited standalone restart/deploy/reset scripts against this instance: their process matching and data paths do not implement the Garden deployment.
 
-Important behavior:
-
-- Keep `README.md` merchant/operator-first: merchant quick start, account setup, inventory, then one-push deployment.
-- One pushed commit should contain backend, frontend, env-loading code, service entrypoint, and deploy scripts.
-- Zo/system env vars take precedence over `.env`.
-- The repo-root `.env` is canonical; `backend/.env` is only a legacy fallback.
-- Production should leave `VITE_API_BASE_URL` unset so frontend API calls stay same-origin.
-- Production should leave `PORT` unset in `.env` because Zo injects it.
-- `git pull` alone is not enough for production deployment.
-- The live Zo app is a long-running service.
-- New code becomes live only after the service is rebuilt or restarted.
-- The canonical deployment overview lives in `DEPLOYMENT.md`; executable scripts live in `deployment/`.
-
-One-push workflow:
-
-1. commit locally
-2. push to the remote branch
-3. on Zo, run `npm run deploy:zo` from the repo root
-4. confirm the health check passes
-
-What `npm run deploy:zo` does:
-
-1. checks for a clean git working tree unless `--allow-dirty` is passed
-2. fetches and fast-forwards the current branch unless `--skip-pull` is passed
-3. installs dependencies
-4. rebuilds the frontend bundle
-5. restarts the running Zo service
-6. waits for the public health check to pass
-
-Useful commands:
-
-```bash
-cd /home/workspace/projects/zo-order-tracker
-npm run deploy:zo
-npm run deploy:zo -- --skip-pull
-npm run deploy:zo -- --skip-pull --allow-dirty
-npm run reset:factory -- --dry-run
-npm run reset:factory -- --yes
-npm run restart:service
-npm run health:service
-```
-
-When to use each:
-
-- `npm run deploy:zo`: normal deploy of latest committed remote code
-- `npm run deploy:zo -- --skip-pull`: deploy the current local checkout as-is
-- `npm run deploy:zo -- --skip-pull --allow-dirty`: deploy local uncommitted changes for testing
-- `npm run reset:factory -- --dry-run`: preview a full app reset without changing data
-- `npm run reset:factory -- --yes`: wipe app data, remove custom workflows, restore seeded demo defaults
-- `npm run restart:service`: restart only
-- `npm run health:service`: verify only
-
-Factory reset scope:
-
-- resets SQLite orders, inventory, and shop config data
-- removes signed-up users and saved user profiles
-- deletes published custom workflow JSON files except the built-in defaults
-- preserves repo-root `.env`, legacy `backend/.env`, secrets, and deployment configuration
-- creates a backup under `deployment/backups/` before changing anything
-
-Verification target:
-
-```text
-https://zo-order-tracker-shab.zocomputer.io/api/health
-```
-
-If the live site looks stale after a pull:
-
-1. run `npm run deploy:zo`
-2. if needed, run `npm run health:service`
-3. if health fails, inspect the service and build logs before changing code
-
-Files to read first for deployment context:
-
-- `README.md`
-- `DEPLOYMENT.md`
-- `package.json`
-- `deployment/deploy.sh`
-- `deployment/service-entrypoint.sh`
+`deployment/setup-garden.js` prepares a new installation without overwriting existing state. Run it only for initial setup or a deliberately scoped recovery. Keep demo credential disclosure disabled and payment details unconfigured until the merchant supplies them.

@@ -33,6 +33,7 @@ import type {
 } from "../types";
 import {
   apiBase,
+  appBasePath,
   defaultShopBranding,
   maxPaymentProofPayloadLength,
   maxProductImagePayloadLength,
@@ -930,7 +931,7 @@ export function getAuthModeFromUrl(): AuthMode {
 }
 
 export function getInitialRoute(): AppRoute {
-  const path = window.location.pathname;
+  const path = window.location.pathname.slice(appBasePath.length) || "/";
   if (path.startsWith("/user/login") || path.startsWith("/login")) {
     return "login";
   }
@@ -951,18 +952,18 @@ export function getInitialRoute(): AppRoute {
 
 export function routePath(route: AppRoute) {
   if (route === "intro") {
-    return "/intro";
+    return `${appBasePath}/intro`;
   }
   if (route === "login") {
-    return "/login";
+    return `${appBasePath}/login`;
   }
   if (route === "tech-stack") {
-    return "/tech-stack";
+    return `${appBasePath}/tech-stack`;
   }
   if (route === "why-zo-computer") {
-    return "/why-zo-computer";
+    return `${appBasePath}/why-zo-computer`;
   }
-  return route === "admin" ? "/admin" : "/user";
+  return `${appBasePath}/${route === "admin" ? "admin" : "user"}`;
 }
 
 export function getInitialAdminTab(): AdminTab {
@@ -982,7 +983,7 @@ export function isAdminTab(value: string | null): value is AdminTab {
 }
 
 export function adminTabPath(tab: AdminTab) {
-  return `/admin?tab=${tab}`;
+  return `${appBasePath}/admin?tab=${tab}`;
 }
 
 export function authStorageKey(role: AuthRole) {

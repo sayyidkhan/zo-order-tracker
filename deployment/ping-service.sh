@@ -2,7 +2,7 @@
 
 set -euo pipefail
 
-base_url="${1:-https://zo-order-tracker-shab.zocomputer.io}"
+base_url="${1:-https://public-apps-sayyidkhan.zocomputer.io/zorder}"
 
 page_endpoints=(
   "/"

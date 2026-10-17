@@ -4,38 +4,38 @@ This document describes how zorder is currently deployed and what Zo is meant to
 
 ## Current Deployment Shape
 
-The repo deploys as one service:
+The Garden deployment uses the existing public gateway and one managed app process:
 
 ```text
-Zo HTTP service
-  -> deployment/service-entrypoint.sh
+Garden public gateway /zorder
+  -> zo-order-tracker process on 127.0.0.1:8836
   -> node deploy-server.js
   -> serves frontend/dist
   -> proxies API routes to backend child process
-  -> backend/src/server.js Express API
-  -> backend/data/zorder.sqlite
+  -> backend/src/server.js Express API on 127.0.0.1:8837
+  -> /home/workspace/Data/zorder/zorder.sqlite
 ```
 
 The live URL in the README is:
 
 ```text
-https://zo-order-tracker-shab.zocomputer.io
+https://public-apps-sayyidkhan.zocomputer.io/zorder/
 ```
 
 ## Runtime Components
 
 | Component | File | Purpose |
 | --- | --- | --- |
-| Service entrypoint | `deployment/service-entrypoint.sh` | Installs dependencies and builds frontend when current commit is not built. |
+| Service entrypoint | `node deploy-server.js` | Starts the Garden managed process using the prepared frontend build. |
 | Deploy server | `deploy-server.js` | Serves the frontend bundle and proxies API paths. |
 | Backend server | `backend/src/server.js` | Express API. |
 | Frontend build | `frontend/dist` | Static Vite build. |
-| Database | `backend/data/zorder.sqlite` | Local SQLite data store. |
-| Workflows | `backend/workflows/*.json` | Deterministic workflow JSON. |
+| Database | `/home/workspace/Data/zorder/zorder.sqlite` | Persistent SQLite outside the repository. |
+| Workflows | `/home/workspace/Data/zorder/workflows/*.json` | Runtime workflows, initially copied from repository templates. |
 
 ## API Proxy Paths
 
-`deploy-server.js` proxies these prefixes to the backend:
+The gateway preserves `/zorder`; `deploy-server.js` removes that prefix and proxies these app-relative paths to the backend:
 
 - `/health`
 - `/auth`
@@ -50,7 +50,9 @@ Everything else falls back to the SPA frontend.
 
 ## Environment Variables
 
-Backend/local:
+Garden runtime settings are stored in `/home/workspace/Data/zorder/runtime.env`, selected using `ZORDER_ENV_FILE`. Both app listeners bind to loopback. `APP_BASE_PATH=/zorder` is also required when building Vite. See [DEPLOYMENT.md](../DEPLOYMENT.md) for the current deployment.
+
+For standalone backend/local installations:
 
 ```env
 # Zo injects PORT for the public service. Leave it unset in `.env`.
@@ -69,14 +71,18 @@ WORKFLOW_BUILDER_MODE=local
 
 Rules:
 
-- Zo/system env vars take precedence over the repo-root `.env`.
+- Zo/system env vars take precedence, followed by `ZORDER_ENV_FILE`, repo-root `.env`, then legacy `backend/.env`.
 - `backend/.env` is still read as a legacy fallback.
 - Keep deployment secrets in `.env` on Zo or in Zo env config, not in git.
 - Leave `VITE_API_BASE_URL` unset in deployment so API calls stay same-origin.
 
 ## Deployment Commands
 
-Full deploy:
+Garden: build with `APP_BASE_PATH=/zorder npm run build`, then restart only the managed `zo-order-tracker` service (`svc_pbxvzCVE9KQ`) through Zo's service tools. Verify `https://public-apps-sayyidkhan.zocomputer.io/zorder/api/health`. Do not use the inherited process-matching restart or factory-reset scripts for Garden.
+
+The commands and flow below apply to standalone installations. Set `APP_URL` to that installation's URL when running a health check.
+
+Standalone deploy:
 
 ```bash
 npm run deploy:zo

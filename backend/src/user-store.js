@@ -2,9 +2,10 @@ import crypto from "node:crypto";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import "./env.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const dataDir = path.resolve(__dirname, "..", "data");
+const dataDir = process.env.ZORDER_DATA_DIR || path.resolve(__dirname, "..", "data");
 const usersPath = path.join(dataDir, "users.json");
 
 export function normalizeUsername(username) {

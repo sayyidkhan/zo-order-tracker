@@ -1,63 +1,22 @@
 ---
 name: zo-order-tracker-sync-redeploy
-description: Sync the latest committed code for zo-order-tracker from the remote branch and redeploy it on Zo so the live site actually updates.
+description: Sync committed zo-order-tracker source from GitHub and redeploy its Garden of Zo process while preserving runtime data and its public URL.
 compatibility: Created for Zo Computer
 metadata:
   author: shab.zo.computer
 ---
 
-Use this skill when the task is specifically to get the newest committed code live on the Zo-hosted `zo-order-tracker` app.
+Use when the task is to get the latest committed code live on Garden.
 
-Repository root:
+Checkout: `/home/workspace/Start/garden-of-zo/zo-order-tracker`.
+Repository: `sayyidkhan/zo-order-tracker`.
+Product: `https://public-apps-sayyidkhan.zocomputer.io/zorder/`.
+Health: `https://public-apps-sayyidkhan.zocomputer.io/zorder/api/health`.
 
-```text
-/home/workspace/projects/zo-order-tracker
-```
+Read `AGENTS.md`, `DEPLOYMENT.md` and `Skills/zo-order-tracker-deploy/SKILL.md` for runtime settings and deployment boundaries.
 
-Default command:
+Inspect Git status and fetch the intended branch. Preserve local work; fast-forward only when it can be done without discarding changes. Do not treat a successful pull as a completed deployment.
 
-```bash
-cd /home/workspace/projects/zo-order-tracker
-npm run deploy:zo
-```
+Install app dependencies and build with `APP_BASE_PATH=/zorder npm run build`. After a successful build, restart only managed process `zo-order-tracker` (`svc_pbxvzCVE9KQ`) through Zo's service tools. Run `npm run health:service`; verify healthy JSON, public assets, customer/merchant deep links and login redirects under `/zorder`.
 
-Why this is the correct sync-and-redeploy command:
-
-- it checks that the repo is clean
-- it fetches and fast-forwards the current branch
-- it installs dependencies
-- it rebuilds the frontend bundle
-- it restarts the managed Zo service
-- it waits for the public health check to pass
-
-Important rule:
-
-- do not treat `git pull` by itself as deployment
-- the live app is a long-running service, so pulled code is not live until the service is rebuilt and restarted
-
-When to use variants:
-
-```bash
-cd /home/workspace/projects/zo-order-tracker
-npm run deploy:zo -- --skip-pull
-npm run deploy:zo -- --skip-pull --allow-dirty
-npm run health:service
-```
-
-- `npm run deploy:zo -- --skip-pull`: use when the latest code is already checked out locally and the goal is only to redeploy it
-- `npm run deploy:zo -- --skip-pull --allow-dirty`: use only for local uncommitted testing
-- `npm run health:service`: use to verify the public app after deploy
-
-Verification target:
-
-```text
-https://zo-order-tracker-shab.zocomputer.io/api/health
-```
-
-Read these files first if the deploy does not behave as expected:
-
-- `README.md`
-- `deployment/README.md`
-- `deployment/deploy.sh`
-- `deployment/restart-service.sh`
-- `deployment/service-entrypoint.sh`
+Do not run the inherited `npm run deploy:zo`, process-matching restart or factory-reset scripts against Garden. Do not change gateway visibility or URLs, restart unrelated services, publish credentials, or overwrite `/home/workspace/Data/zorder`.
