@@ -15,8 +15,8 @@ Read `AGENTS.md` and the Garden section of `DEPLOYMENT.md` first.
 - Customer: `/zorder/user`; merchant: `/zorder/admin`.
 - Health: `https://public-apps-sayyidkhan.zocomputer.io/zorder/api/health`.
 - Managed process: `zo-order-tracker` (`svc_pbxvzCVE9KQ`), running `node deploy-server.js`.
-- Runtime: loopback app port 8836 and internal API port 8837, loaded through `ZORDER_ENV_FILE=/home/workspace/Data/zorder/runtime.env`.
-- All live data, workflow files and credentials remain under `/home/workspace/Data/zorder`, outside Git.
+- Runtime: loopback app port 8836 and internal API port 8837, loaded through `ZORDER_ENV_FILE=/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/runtime.env`.
+- All live data, workflow files and credentials remain under `/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data`, excluded from Git by `/zorder-data/` and outside the served `frontend/dist` directory.
 
 Install dependencies with `npm run install:app`. Build with `APP_BASE_PATH=/zorder npm run build`, then restart only the app through Zo's managed service tools. Run `npm run health:service` and confirm the JSON reports a healthy backend; verify customer and merchant navigation stays under `/zorder`.
 

@@ -1,9 +1,10 @@
 import { randomInt, randomBytes } from "node:crypto";
 import { mkdirSync, existsSync, writeFileSync, copyFileSync, readdirSync, constants } from "node:fs";
 import { resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 import { loadEnvFiles } from "../env-loader.js";
 
-const dataDir = process.env.ZORDER_DATA_DIR || "/home/workspace/Data/zorder";
+const dataDir = process.env.ZORDER_DATA_DIR || fileURLToPath(new URL("../zorder-data/", import.meta.url));
 const envFile = resolve(dataDir, "runtime.env");
 mkdirSync(dataDir, { recursive: true, mode: 0o700 });
 mkdirSync(resolve(dataDir, "workflows"), { recursive: true, mode: 0o700 });

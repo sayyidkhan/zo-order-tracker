@@ -13,7 +13,7 @@ Garden public gateway /zorder
   -> serves frontend/dist
   -> proxies API routes to backend child process
   -> backend/src/server.js Express API on 127.0.0.1:8837
-  -> /home/workspace/Data/zorder/zorder.sqlite
+  -> /home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/zorder.sqlite
 ```
 
 The live URL in the README is:
@@ -30,8 +30,8 @@ https://public-apps-sayyidkhan.zocomputer.io/zorder/
 | Deploy server | `deploy-server.js` | Serves the frontend bundle and proxies API paths. |
 | Backend server | `backend/src/server.js` | Express API. |
 | Frontend build | `frontend/dist` | Static Vite build. |
-| Database | `/home/workspace/Data/zorder/zorder.sqlite` | Persistent SQLite outside the repository. |
-| Workflows | `/home/workspace/Data/zorder/workflows/*.json` | Runtime workflows, initially copied from repository templates. |
+| Database | `/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/zorder.sqlite` | Private SQLite in the gitignored project data folder. |
+| Workflows | `/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/workflows/*.json` | Runtime workflows, initially copied from repository templates. |
 
 ## API Proxy Paths
 
@@ -50,7 +50,7 @@ Everything else falls back to the SPA frontend.
 
 ## Environment Variables
 
-Garden runtime settings are stored in `/home/workspace/Data/zorder/runtime.env`, selected using `ZORDER_ENV_FILE`. Both app listeners bind to loopback. `APP_BASE_PATH=/zorder` is also required when building Vite. See [DEPLOYMENT.md](../DEPLOYMENT.md) for the current deployment.
+Garden runtime settings are stored in `/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/runtime.env`, selected using `ZORDER_ENV_FILE`. Both app listeners bind to loopback. `APP_BASE_PATH=/zorder` is also required when building Vite. See [DEPLOYMENT.md](../DEPLOYMENT.md) for the current deployment.
 
 For standalone backend/local installations:
 

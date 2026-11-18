@@ -78,7 +78,7 @@ https://public-apps-sayyidkhan.zocomputer.io/zorder/admin
 
 2. Sign in with the admin username and 6-digit PIN.
 
-The Garden owner credentials are stored privately in `/home/workspace/Data/zorder/access.md`. Published demo credentials do not work on this deployment.
+The Garden owner credentials are stored privately in `/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/access.md`. Published demo credentials do not work on this deployment.
 
 3. Open **Branding**.
 
@@ -128,7 +128,7 @@ Customers can create an account. The Garden owner's test customer credentials ar
 
 The MVP uses simple username + 6-digit PIN login.
 
-Garden accounts are configured in the private `/home/workspace/Data/zorder/runtime.env` file. For a separate local installation, the sample customer and admin accounts are configured in the repo-root `.env` file:
+Garden accounts are configured in the private `/home/workspace/Start/garden-of-zo/zo-order-tracker/zorder-data/runtime.env` file. For a separate local installation, the sample customer and admin accounts are configured in the repo-root `.env` file:
 
 ```env
 ZORDER_USER_USERNAME=user
